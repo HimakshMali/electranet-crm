@@ -3,9 +3,14 @@ from google.oauth2.service_account import Credentials
 
 
 def fetch_leads_from_google_sheet():
-    SERVICE_ACCOUNT_FILE = "crm/functions/service_account.json"
+   
 
     SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+
+    SERVICE_ACCOUNT_FILE = os.environ.get(
+    "SERVICE_ACCOUNT_FILE",
+    "/etc/secrets/service_account.json"   # Render secret path
+    )
 
     creds = Credentials.from_service_account_file(
         SERVICE_ACCOUNT_FILE,
