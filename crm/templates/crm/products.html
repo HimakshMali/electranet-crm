@@ -1,0 +1,137 @@
+{% extends "crm/base.html" %}
+{% block content %}
+
+<div class="container mt-4">
+
+    <h2 class="mb-4 fw-bold">Products</h2>
+
+    <!-- ADD PRODUCT FORM -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+
+            <form method="POST" class="row g-3">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add">
+
+                <div class="col-md-3">
+                    <label class="form-label">Product Name</label>
+                    <input type="text" name="name" class="form-control" required>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">HSN Code</label>
+                    <input type="text" name="hsn_code" class="form-control">
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Price Incl. GST</label>
+                    <input type="number" step="0.01" name="unit_price_incl_gst" class="form-control" required>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">GST %</label>
+                    <input type="number" step="0.01" name="gst_rate" value="18" class="form-control" required>
+                </div>
+
+                <div class="col-md-1">
+                    <label class="form-label">Stock</label>
+                    <input type="number" name="inventory" class="form-control" required>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Supplier</label>
+                    <input type="text" name="supplier" class="form-control">
+                </div>
+
+                <div class="col-md-12">
+                    <button class="btn btn-success">Add Product</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+    <!-- PRODUCTS TABLE -->
+    <div class="card shadow-sm">
+        <div class="card-body table-responsive">
+
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>HSN</th>
+                        <th>Price Incl. GST</th>
+                        <th>GST %</th>
+                        <th>Stock</th>
+                        <th>Supplier</th>
+                        <th>Stock Value</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for p in products %}
+                    <tr>
+                        <form method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="id" value="{{ p.id }}">
+
+                            <td>
+                                <input type="text" name="name" value="{{ p.name }}" class="form-control">
+                            </td>
+
+                            <td>
+                                <input type="text" name="hsn_code" value="{{ p.hsn_code|default:'' }}" class="form-control">
+                            </td>
+
+                            <td>
+                                <input type="number" step="0.01" name="unit_price_incl_gst" value="{{ p.unit_price_incl_gst }}" class="form-control">
+                            </td>
+
+                            <td>
+                                <input type="number" step="0.01" name="gst_rate" value="{{ p.gst_rate }}" class="form-control">
+                            </td>
+
+                            <td>
+                                <input type="number" name="inventory" value="{{ p.inventory }}" class="form-control">
+                            </td>
+
+                            <td>
+                                <input type="text" name="supplier" value="{{ p.supplier|default:'' }}" class="form-control">
+                            </td>
+
+                            <td>
+                                ₹{{ p.unit_price_incl_gst|floatformat:2 }}
+                                × {{ p.inventory }}
+                            </td>
+
+                            <td class="d-flex gap-2">
+                                <button name="action" value="edit" class="btn btn-sm btn-primary">
+                                    Save
+                                </button>
+
+                                <button name="action" value="delete" class="btn btn-sm btn-danger"
+                                    onclick="return confirm('Delete this product?');">
+                                    Delete
+                                </button>
+                            </td>
+                        </form>
+                    </tr>
+
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">
+                            No products added yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+
+            </table>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

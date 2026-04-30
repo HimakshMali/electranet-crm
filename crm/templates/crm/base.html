@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+
+    <title>{% block title %}Electranet Invoice Pro{% endblock %}</title>
+
+    <style>
+        :root {
+            --bg-light: #f8fafc;
+            --border-color: #e2e8f0;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --sidebar-width: 240px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-light) !important;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            overflow-x: hidden;
+        }
+
+        .sidebar {
+            width: var(--sidebar-width);
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 1000;
+            padding-top: 1rem;
+
+            display: flex;
+            flex-direction: column;
+
+            background: linear-gradient(
+                180deg,
+                rgba(255, 255, 255, 0.94) 0%,
+                rgba(248, 250, 252, 0.88) 45%,
+                rgba(241, 245, 249, 0.82) 100%
+            );
+            backdrop-filter: blur(12px);
+            border-right: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 4px 0 22px rgba(15, 23, 42, 0.04);
+
+            overflow-y: auto;
+            overflow-x: hidden;
+
+            scrollbar-width: thin;
+            scrollbar-color: rgba(37, 99, 235, 0.25) transparent;
+
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(37, 99, 235, 0.22);
+            border-radius: 20px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(37, 99, 235, 0.35);
+        }
+
+        .sidebar::after {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: calc(var(--sidebar-width) - 1px);
+            width: 1px;
+            height: 100vh;
+            background: linear-gradient(
+                to bottom,
+                transparent,
+                rgba(37, 99, 235, 0.25),
+                transparent
+            );
+            pointer-events: none;
+        }
+
+        .sidebar-brand {
+            font-weight: 800;
+            color: #2563eb !important;
+            letter-spacing: -0.5px;
+            text-decoration: none;
+            font-size: 1.35rem;
+            padding: 0.5rem 1.75rem 1.5rem 1.75rem;
+            display: block;
+            flex-shrink: 0;
+        }
+
+        .sidebar .nav {
+            padding-bottom: 1rem;
+            flex-shrink: 0;
+        }
+
+        .sidebar .nav-link {
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 0.95rem;
+            padding: 10px 16px;
+            margin: 4px 16px;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .sidebar .nav-link:hover {
+            color: #1e293b;
+            background: linear-gradient(
+                90deg,
+                rgba(255, 243, 23, 0.85),
+                rgba(255, 243, 23, 0.45)
+            );
+            transform: translateX(4px);
+        }
+
+        .sidebar .nav-link.active {
+            color: #1e293b;
+            background: linear-gradient(
+                90deg,
+                rgba(255, 243, 23, 0.95),
+                rgba(255, 243, 23, 0.55)
+            );
+            font-weight: 700;
+            box-shadow: 0 8px 18px rgba(255, 243, 23, 0.22);
+        }
+
+        .sidebar .nav-link i {
+            width: 24px;
+            margin-right: 10px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        .sidebar-heading {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+        .user-section {
+            margin-top: auto;
+            padding: 1.2rem 1.5rem;
+            border-top: 1px solid rgba(226, 232, 240, 0.7);
+            background: linear-gradient(
+                180deg,
+                rgba(255, 255, 255, 0.55),
+                rgba(248, 250, 252, 0.8)
+            );
+            flex-shrink: 0;
+        }
+
+        .user-section .badge {
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 2rem;
+            min-height: 100vh;
+            transition: margin-left 0.3s ease-in-out;
+        }
+
+        .mobile-header {
+            display: none;
+            background-color: #ffffff;
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1001;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        @media (max-width: 991.98px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.show {
+                transform: translateX(0);
+                box-shadow: 8px 0 30px rgba(15, 23, 42, 0.12);
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding-top: 5rem;
+            }
+
+            .mobile-header {
+                display: flex !important;
+            }
+
+            .sidebar::after {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="mobile-header shadow-sm">
+        <a class="sidebar-brand p-0 mb-0" href="/home">
+            <i class="fas fa-bolt me-2 text-primary"></i>Dashboard
+        </a>
+
+        <button class="btn btn-light d-lg-none border-0 shadow-sm" type="button" id="sidebarToggle">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+
+    <nav class="sidebar" id="sidebar">
+        <a class="sidebar-brand" href="/home">
+            <i class="far fa-lightbulb me-2"></i>Electranet
+        </a>
+
+        <ul class="nav flex-column mb-auto">
+            <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="/home">
+    <i class="fas fa-chart-line"></i> Deals
+</a>
+
+<a class="nav-link {% if request.resolver_match.url_name == 'all_leads' %}active{% endif %}" href="{% url 'all_leads' %}">
+    <i class="fas fa-list-ul"></i> All Leads
+</a>
+
+<a class="nav-link {% if request.resolver_match.url_name == 'converted-leads' %}active{% endif %}" href="{% url 'converted-leads' %}">
+    <i class="fas fa-check-double"></i> Converted Leads
+</a>
+
+<a class="nav-link {% if request.resolver_match.url_name == 'products' %}active{% endif %}" href="{% url 'products' %}">
+    <i class="fas fa-box-open"></i> Products
+</a>
+
+<a class="nav-link {% if request.resolver_match.url_name == 'Invoice' %}active{% endif %}" href="{% url 'Invoice' %}">
+    <i class="fas fa-file-invoice-dollar"></i> Invoice
+</a>
+
+<a class="nav-link {% if request.resolver_match.url_name == 'ledger_dashboard' %}active{% endif %}" href="{% url 'ledger_dashboard' %}">
+    <i class="fas fa-book"></i> Ledger
+</a>    
+
+            {% if is_admin %}
+            <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-4 mt-4 mb-2 text-muted text-uppercase">
+                <span>Admin</span>
+            </h6>
+
+            <a class="nav-link {% if request.resolver_match.url_name == 'employees_list' %}active{% endif %}" href="{% url 'employees_list' %}">
+    <i class="fas fa-user-tie"></i> Employees
+</a>
+
+<a class="nav-link {% if request.resolver_match.url_name == 'lead_distribution' %}active{% endif %}" href="{% url 'lead_distribution' %}">
+    <i class="fa fa-paper-plane"></i> Lead Distribution
+</a>
+
+<a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
+    <i class="fa fa-area-chart"></i> Dashboard
+</a>
+            {% endif %}
+        </ul>
+
+        <div class="user-section">
+            {% if user.is_authenticated %}
+            <div class="mb-3 text-truncate small text-muted d-flex align-items-center">
+                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2"
+                    style="width: 32px; height: 32px; font-weight: 600;">
+                    {{ user.username|make_list|first|upper }}
+                </div>
+
+                <div>
+                    {% if is_admin %}
+                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 mb-1 d-inline-block">
+                        Admin
+                    </span><br>
+                    {% endif %}
+
+                    <strong class="text-dark">{{ user.username }}</strong>
+                </div>
+            </div>
+
+            <a class="btn btn-sm btn-light border w-100 fw-medium text-muted" href="/login">
+                <i class="fas fa-sign-out-alt me-1"></i> Logout
+            </a>
+
+            {% else %}
+
+            <a class="btn btn-sm btn-primary w-100 fw-medium" href="/login">
+                <i class="fas fa-sign-in-alt me-1"></i> Login
+            </a>
+
+            {% endif %}
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container-fluid px-0">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebar = document.getElementById('sidebar');
+
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', function () {
+            sidebar.classList.toggle('show');
+        });
+    }
+
+    // FIX: keep selected sidebar item visible after page change
+    document.addEventListener("DOMContentLoaded", function () {
+        const activeLink = document.querySelector(".sidebar .nav-link.active");
+
+        if (activeLink) {
+            activeLink.scrollIntoView({
+                behavior: "instant",
+                block: "center"
+            });
+        }
+    });
+</script>
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

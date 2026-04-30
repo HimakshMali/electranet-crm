@@ -1,0 +1,1186 @@
+{% extends "crm/base.html" %}
+
+{% block title %}Deals Pipeline{% endblock %}
+
+{% block content %}
+<style>
+    /* --- CSS Variables for Corporate Light Theme --- */
+    :root {
+        --bg-body: #f8fafc;
+        --bg-surface: #ffffff;
+        --bg-column: #f1f5f9;
+        --border-soft: #e2e8f0;
+        --text-dark: #0f172a;
+        --text-muted: #64748b;
+        --primary-color: #2563eb;
+        --primary-hover: #1d4ed8;
+        --success-color: #10b981;
+        --success-hover: #059669;
+        --danger-color: #ef4444;
+        
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+        --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05);
+        --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.06);
+        
+        --radius-lg: 16px; 
+        --radius-md: 12px;
+        --radius-sm: 8px;
+    }
+
+    /* --- Global Dashboard Adjustments --- */
+    .dashboard-main {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: var(--text-dark);
+        background-color: var(--bg-body);
+        min-height: 100vh;
+        padding-bottom: 2rem;
+    }
+
+    a { text-decoration: none; }
+
+    /* --- Unified Header Card --- */
+    .dashboard-header {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        padding: 24px 32px;
+        margin-bottom: 32px;
+        box-shadow: var(--shadow-sm);
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .user-greeting h2 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0 0 6px 0;
+        color: var(--text-dark);
+        letter-spacing: -0.01em;
+    }
+
+    .user-greeting p {
+        margin: 0;
+        color: var(--text-muted);
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    /* --- Today's Follow Up Section --- */
+    .section-title {
+        font-size: 1.15rem;
+        font-weight: 600;
+        color: var(--text-dark);
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .followup-card {
+        background: var(--bg-surface);
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-soft);
+        padding: 20px;
+        box-shadow: var(--shadow-sm);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .followup-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .followup-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background-color: #f59e0b;
+    }
+
+    .followup-info i {
+        width: 18px;
+        color: var(--text-muted);
+        text-align: center;
+        margin-right: 6px;
+    }
+
+    /* --- Kanban Board Container --- */
+    .kanban-wrapper {
+        position: relative;
+        width: 100%;
+        margin-top: 32px;
+    }
+
+    .kanban-container {
+        display: flex;
+        gap: 24px;
+        overflow-x: auto;
+        padding-bottom: 24px;
+        align-items: flex-start;
+        scroll-behavior: smooth;
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e1 transparent;
+    }
+
+    .kanban-container::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .kanban-container::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border-radius: 4px;
+    }
+
+    .kanban-col {
+        flex: 0 0 320px;
+        background: var(--bg-column);
+        border-radius: var(--radius-lg);
+        padding: 20px;
+        min-height: calc(100vh - 350px);
+        border: 1px solid rgba(226, 232, 240, 0.8);
+    }
+
+    /* --- Corporate Column Headers --- */
+    .kanban-header {
+        padding: 0 4px 16px 4px;
+        font-weight: 700;
+        font-size: 0.95rem;
+        color: var(--text-dark);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 20px;
+    }
+
+    .col-new .kanban-header .badge { color: #3b82f6 !important; background-color: #eff6ff !important; border-color: #bfdbfe !important; }
+    .col-contacted .kanban-header .badge { color: #8b5cf6 !important; background-color: #f5f3ff !important; border-color: #ddd6fe !important; }
+    .col-paperwork .kanban-header .badge { color: #f59e0b !important; background-color: #fffbeb !important; border-color: #fde68a !important; }
+    .col-finalised .kanban-header .badge { color: #10b981 !important; background-color: #ecfdf5 !important; border-color: #a7f3d0 !important; }
+
+    /* --- Lead Cards --- */
+    .lead-card {
+        background: var(--bg-surface);
+        border-radius: var(--radius-md);
+        padding: 18px;
+        margin-bottom: 16px;
+        border: 1px solid var(--border-soft);
+        box-shadow: var(--shadow-sm);
+        position: relative;
+        transition: all 0.2s ease;
+    }
+
+    .lead-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+        border-color: #cbd5e1;
+    }
+
+    .lead-card h6 {
+        margin: 0 0 12px 0;
+        font-weight: 600;
+        font-size: 1.05rem;
+        color: var(--text-dark);
+        padding-right: 48px;
+        line-height: 1.4;
+    }
+
+    .lead-card h6 a {
+        color: var(--text-dark);
+        transition: color 0.2s;
+    }
+
+    .lead-card h6 a:hover {
+        color: var(--primary-color);
+    }
+
+    .lead-info {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+    }
+
+    .lead-info i {
+        width: 16px;
+        margin-right: 8px;
+        color: #94a3b8;
+        text-align: center;
+    }
+    
+    /* WhatsApp Hover Effect */
+    .hover-whatsapp {
+        color: #10b981 !important;
+        opacity: 0.7;
+        transition: all 0.2s;
+    }
+    .hover-whatsapp:hover {
+        opacity: 1;
+        transform: scale(1.15);
+    }
+
+
+    #btn_send_whatsapp {
+    background-color: #25D366; /* WhatsApp green */
+    color: #e4e4e4;
+    border: none;
+}
+
+#btn_send_whatsapp:hover {
+    background-color: #1ebe5d; /* slightly darker on hover */
+    color: #fff;
+}
+
+#btn_send_whatsapp {
+    background-color: #25D366; /* WhatsApp green */
+    color: #fff;
+    border: none;
+}
+
+#btn_send_whatsapp:hover {
+    background-color: #1ebe5d; /* slightly darker on hover */
+    color: #fff;
+}
+
+    /* --- Action Buttons --- */
+    .card-actions {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        display: flex;
+        gap: 6px;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    .lead-card:hover .card-actions {
+        opacity: 1;
+    }
+
+    .action-btn {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-soft);
+        color: var(--text-muted);
+        font-size: 0.8rem;
+        cursor: pointer;
+        padding: 6px;
+        border-radius: var(--radius-sm);
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .action-btn:hover {
+        box-shadow: var(--shadow-sm);
+    }
+
+    .btn-edit:hover { color: var(--primary-color); border-color: var(--primary-color); background-color: #eff6ff;}
+    .btn-delete:hover { color: var(--danger-color); border-color: var(--danger-color); background-color: #fef2f2;}
+
+    /* --- Modern Buttons --- */
+    .btn-custom-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+        color: white;
+        font-weight: 500;
+        border-radius: var(--radius-sm);
+        transition: all 0.2s;
+    }
+
+    .btn-custom-primary:hover {
+        background-color: var(--primary-hover);
+        border-color: var(--primary-hover);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+    }
+
+    .btn-custom-success {
+        background-color: var(--success-color);
+        border-color: var(--success-color);
+        color: white;
+        font-weight: 500;
+        border-radius: var(--radius-sm);
+        transition: all 0.2s;
+    }
+
+    .btn-custom-success:hover {
+        background-color: var(--success-hover);
+        border-color: var(--success-hover);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
+    }
+
+    .btn-subtle {
+        background-color: #f1f5f9;
+        color: #475569;
+        border: 1px solid transparent;
+        font-weight: 500;
+        border-radius: var(--radius-sm);
+        transition: all 0.2s ease;
+    }
+
+    .btn-subtle:hover {
+        background-color: #e2e8f0;
+        color: #1e293b;
+    }
+
+    /* --- Modals --- */
+    .modal-content {
+        border-radius: var(--radius-lg);
+        border: none;
+        box-shadow: var(--shadow-lg);
+    }
+
+    .modal-header {
+        border-bottom: 1px solid var(--border-soft);
+        padding: 20px 24px;
+    }
+
+    .modal-body {
+        padding: 24px;
+    }
+
+    .modal-footer {
+        border-top: 1px solid var(--border-soft);
+        padding: 16px 24px;
+        background-color: #f8fafc;
+        border-bottom-left-radius: var(--radius-lg);
+        border-bottom-right-radius: var(--radius-lg);
+    }
+
+    .form-control, .form-select {
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-soft);
+        padding: 0.6rem 0.75rem;
+        font-size: 0.95rem;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.1);
+    }
+
+    /* --- Activity Feed --- */
+    .activity-section {
+        margin-top: 40px;
+        background: var(--bg-surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        padding: 32px;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .activity-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 32px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border-soft);
+    }
+
+    .activity-header h4 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-dark);
+    }
+
+    .timeline {
+        position: relative;
+        padding-left: 32px;
+    }
+
+    .timeline::before {
+        content: "";
+        position: absolute;
+        left: 11px;
+        top: 8px;
+        bottom: 0;
+        width: 2px;
+        background: #e2e8f0;
+        border-radius: 2px;
+    }
+
+    .timeline-item {
+        position: relative;
+        background: #ffffff;
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-md);
+        padding: 20px 24px;
+        margin-bottom: 24px;
+        box-shadow: var(--shadow-sm);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .timeline-item:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+        border-color: #cbd5e1;
+    }
+
+    .timeline-item::before {
+        content: "";
+        position: absolute;
+        left: -29px;
+        top: 24px;
+        width: 16px;
+        height: 16px;
+        background: var(--primary-color);
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 0 0 3px #dbeafe;
+        z-index: 1;
+    }
+
+    .timeline-meta {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+    }
+
+    .timeline-meta strong { color: var(--text-dark); font-weight: 600; }
+    .timeline-title { font-size: 1.05rem; font-weight: 600; margin-bottom: 8px; color: var(--text-dark); }
+    .timeline-description { margin: 0; color: #475569; line-height: 1.6; font-size: 0.95rem; }
+</style>
+
+<div class="d-none">
+    {% for d in display_leads %}
+    {{ d.name }} {{ d.source }} {{ d.status }}
+    {% endfor %}
+</div>
+
+<div class="dashboard-main pt-4">
+    <div class="container-fluid">
+        <div class="dashboard-header">
+            <div class="user-greeting">
+                <h2>Deals Pipeline</h2>
+                <p>
+                    Welcome back, <strong class="text-dark">{{ user.username }}</strong>
+                    <span class="text-muted mx-2">•</span>
+                    {{ user.email }}
+                    {% if is_admin %}
+                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 ms-2 rounded-pill px-3 py-1">Admin</span>
+                    {% else %}
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 ms-2 rounded-pill px-3 py-1">Employee</span>
+                    {% endif %}
+                </p>
+            </div>
+            <div class="header-actions">
+                {% if is_admin %}
+                <a href="{% url 'add_employee' %}" class="btn btn-outline-secondary bg-white fw-medium px-3 py-2 shadow-sm rounded-3">
+                    <i class="fas fa-user-plus me-2 text-muted"></i>Add Employee
+                </a>
+                {% endif %}
+                <button class="btn btn-custom-primary fw-medium px-4 py-2 shadow-sm rounded-3" data-bs-toggle="modal" data-bs-target="#addLeadModal">
+                    <i class="fas fa-plus me-2"></i>Add Lead
+                </button>
+            </div>
+        </div>
+
+        <h4 class="section-title">
+            <i class="fa fa-calendar-day text-primary"></i>
+            Today's Follow Up
+        </h4>
+
+        <div class="row mb-4">
+            {% for f in todays_followups %}
+            {% if is_admin or f.lead.added_by == request.user %}
+            <div class="col-md-4 mb-3">
+                <div class="followup-card h-100">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <strong class="text-dark fs-5">{{ f.lead.name }}</strong>
+                        <div class="dropdown">
+                            <button class="btn btn-link text-muted p-0" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                <li><a class="dropdown-item text-warning" href="#" data-bs-toggle="modal" data-bs-target="#editFollowupModal{{ f.id }}"><i class="fas fa-edit me-2"></i>Edit</a></li>
+                                <li>
+                                    <form method="POST" action="{% url 'delete_followup' %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="followup_id" value="{{ f.id }}">
+                                        <button type="submit" class="dropdown-item text-danger" onclick="return confirm('Delete this follow-up?');"><i class="fas fa-trash me-2"></i>Delete</button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="followup-info mb-2"><i class="fa fa-phone"></i> {{ f.lead.phone|default:"No Phone" }}</div>
+                    <div class="followup-info mb-2 text-primary fw-medium"><i class="fa fa-clock"></i> {{ f.followup_datetime }}</div>
+                    <div class="followup-info mt-3 pt-3 border-top text-muted"><i class="fa fa-align-left"></i> {{ f.note|default:"No notes added." }}</div>
+                </div>
+            </div>
+
+            <div class="modal fade" id="editFollowupModal{{ f.id }}" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <form method="POST" action="{% url 'edit_followup' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="followup_id" value="{{ f.id }}">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title fw-bold">Edit Follow-Up</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label text-muted fw-semibold small">Date & Time</label>
+                                    <input type="datetime-local" name="followup_datetime" class="form-control" value="{{ f.followup_datetime|date:'Y-m-d\\TH:i' }}" required>
+                                </div>
+                                <div>
+                                    <label class="form-label text-muted fw-semibold small">Note</label>
+                                    <textarea name="note" class="form-control" rows="3">{{ f.note }}</textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-custom-primary px-4">Update</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+            {% empty %}
+            <div class="col-12">
+                <div class="p-4 text-center bg-white border rounded-3 shadow-sm text-muted">
+                    <i class="fas fa-check-circle fs-3 text-success mb-2 opacity-50"></i>
+                    <p class="mb-0 fw-medium">You're all caught up! No follow-ups scheduled for today.</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="kanban-wrapper">
+            <div class="kanban-container">
+
+                <div class="kanban-col col-new">
+                    <div class="kanban-header">
+                        <span>New Leads</span>
+                        <span class="badge border rounded-pill px-2">New</span>
+                    </div>
+                    {% for lead in leads %}
+                        {% if is_admin or lead.added_by == request.user %}
+                            {% if lead.status == 'New' or not lead.status %}
+                            <div class="lead-card">
+                                <h6>{{ lead.name }}</h6>
+                                <div class="lead-info">
+                                    <i class="fas fa-phone-alt"></i>{{ lead.phone|default:"-" }}
+                                    {% if lead.phone %}
+                                    <a href="#" class="ms-auto hover-whatsapp" data-bs-toggle="modal" data-bs-target="#whatsappModal" data-phone="{{ lead.phone }}" data-name="{{ lead.name }}">
+                                        <i class="fab fa-whatsapp fs-5 m-0"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                                <div class="lead-info"><i class="fas fa-envelope"></i>{{ lead.email|default:"-" }}</div>
+                                <div class="lead-info"><i class="fas fa-bullhorn"></i>{{ lead.source|default:"-" }}</div>
+                                <div class="lead-info"><i class="fas fa-calendar-plus"></i>{{ lead.created_at|default:"-" }}</div>
+
+                                <div class="card-actions">
+                                    <button class="action-btn btn-edit" data-bs-toggle="modal" data-bs-target="#editLeadModal"
+                                        data-id="{{ lead.id }}" data-name="{{ lead.name }}" data-source="{{ lead.source }}"
+                                        data-status="{{ lead.status }}" data-email="{{ lead.email }}" data-phone="{{ lead.phone }}">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+                                    <form method="post" style="display:inline;" onsubmit="return confirm('Delete this lead permanently?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="delete_lead">
+                                        <button type="submit" name="lead_id" value="{{ lead.id }}" class="action-btn btn-delete">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <div class="kanban-col col-contacted">
+                    <div class="kanban-header">
+                        <span>Contacted</span>
+                        <span class="badge border rounded-pill px-2">Active</span>
+                    </div>
+                    {% for lead in leads %}
+                        {% if is_admin or lead.added_by == request.user %}
+                            {% if lead.status == 'Contacted' %}
+                            <div class="lead-card">
+                                <h6><a href="{% url 'lead_detail' lead.id %}">{{ lead.name }}</a></h6>
+                                
+                                <div class="lead-info mb-3">
+                                    <i class="fas fa-phone-alt"></i>{{ lead.phone|default:"-" }}
+                                    {% if lead.phone %}
+                                    <a href="#" class="ms-auto hover-whatsapp" data-bs-toggle="modal" data-bs-target="#whatsappModal" data-phone="{{ lead.phone }}" data-name="{{ lead.name }}">
+                                        <i class="fab fa-whatsapp fs-5 m-0"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+
+                                {% with next_followup=lead.followups.first %}
+                                {% if next_followup %}
+                                <div class="lead-info text-primary fw-medium mb-3 bg-primary bg-opacity-10 p-2 rounded">
+                                    <i class="fas fa-clock"></i> Next: {{ next_followup.followup_datetime|date:"M d, H:i" }}
+                                </div>
+                                {% else %}
+                                <div class="lead-info text-muted mb-3">
+                                    <i class="fas fa-calendar-times"></i> No follow-up scheduled
+                                </div>
+                                {% endif %}
+                                {% endwith %}
+
+                                <button class="btn btn-subtle btn-sm w-100 fw-medium" data-bs-toggle="modal" data-bs-target="#convertModal{{ lead.id }}">
+                                    <i class="fas fa-plus me-1"></i> Add Follow-up
+                                </button>
+
+                                <div class="card-actions">
+                                    <button class="action-btn btn-edit" data-bs-toggle="modal" data-bs-target="#editLeadModal"
+                                        data-id="{{ lead.id }}" data-name="{{ lead.name }}" data-source="{{ lead.source }}"
+                                        data-status="{{ lead.status }}" data-email="{{ lead.email }}" data-phone="{{ lead.phone }}">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+                                    <form method="post" style="display:inline;" onsubmit="return confirm('Delete this lead permanently?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="delete_lead">
+                                        <button type="submit" name="lead_id" value="{{ lead.id }}" class="action-btn btn-delete">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="modal fade" id="convertModal{{ lead.id }}" tabindex="-1">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <form method="POST" action="{% url 'add_followup' %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="lead_id" value="{{ lead.id }}">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title fw-bold">Add Follow-Up: {{ lead.name }}</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="mb-3">
+                                                    <label class="form-label text-muted fw-semibold small">Date & Time</label>
+                                                    <input type="datetime-local" name="followup_datetime" class="form-control" required>
+                                                </div>
+                                                <div>
+                                                    <label class="form-label text-muted fw-semibold small">Notes</label>
+                                                    <textarea name="note" class="form-control" rows="3" placeholder="Discussion points..."></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-custom-primary px-4">Save Follow-up</button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <div class="kanban-col col-paperwork">
+                    <div class="kanban-header">
+                        <span>Paperwork</span>
+                        <span class="badge border rounded-pill px-2">Processing</span>
+                    </div>
+                    {% for lead in leads %}
+                        {% if is_admin or lead.added_by == request.user %}
+                            {% if lead.status == 'Paperwork' %}
+                            <div class="lead-card">
+                                <h6>{{ lead.name }}</h6>
+                                <div class="lead-info">
+                                    <i class="fas fa-phone-alt"></i>{{ lead.phone|default:"-" }}
+                                    {% if lead.phone %}
+                                    <a href="#" class="ms-auto hover-whatsapp" data-bs-toggle="modal" data-bs-target="#whatsappModal" data-phone="{{ lead.phone }}" data-name="{{ lead.name }}">
+                                        <i class="fab fa-whatsapp fs-5 m-0"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                                <div class="lead-info"><i class="fas fa-envelope"></i>{{ lead.email|default:"-" }}</div>
+                                <div class="lead-info"><i class="fas fa-bullhorn"></i>{{ lead.source|default:"-" }}</div>
+
+                                <div class="card-actions">
+                                    <button class="action-btn btn-edit" data-bs-toggle="modal" data-bs-target="#editLeadModal"
+                                        data-id="{{ lead.id }}" data-name="{{ lead.name }}" data-source="{{ lead.source }}"
+                                        data-status="{{ lead.status }}" data-email="{{ lead.email }}" data-phone="{{ lead.phone }}">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+                                    <form method="post" style="display:inline;" onsubmit="return confirm('Delete this lead permanently?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="delete_lead">
+                                        <button type="submit" name="lead_id" value="{{ lead.id }}" class="action-btn btn-delete">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <div class="kanban-col col-finalised">
+                    <div class="kanban-header">
+                        <span>Finalised</span>
+                        <span class="badge border rounded-pill px-2">Won</span>
+                    </div>
+                    {% for lead in leads %}
+                        {% if is_admin or lead.added_by == request.user %}
+                            {% if lead.status == 'Finalised' %}
+                            <div class="lead-card border-success border-opacity-25" style="background-color: #f8fafc;">
+                                <h6>{{ lead.name }}</h6>
+                                <div class="lead-info">
+                                    <i class="fas fa-phone-alt"></i>{{ lead.phone|default:"-" }}
+                                    {% if lead.phone %}
+                                    <a href="#" class="ms-auto hover-whatsapp" data-bs-toggle="modal" data-bs-target="#whatsappModal" data-phone="{{ lead.phone }}" data-name="{{ lead.name }}">
+                                        <i class="fab fa-whatsapp fs-5 m-0"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                                <div class="lead-info"><i class="fas fa-envelope"></i>{{ lead.email|default:"-" }}</div>
+
+                                <button class="btn btn-custom-success btn-sm w-100 mt-3" data-bs-toggle="modal" data-bs-target="#promoteModal{{ lead.id }}">
+                                    <i class="fas fa-trophy me-1"></i> Promote to Customer
+                                </button>
+
+                                <div class="card-actions">
+                                    <button class="action-btn btn-edit" data-bs-toggle="modal" data-bs-target="#editLeadModal"
+                                        data-id="{{ lead.id }}" data-name="{{ lead.name }}" data-source="{{ lead.source }}"
+                                        data-status="{{ lead.status }}" data-email="{{ lead.email }}" data-phone="{{ lead.phone }}">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+                                    <form method="post" style="display:inline;" onsubmit="return confirm('Delete this lead permanently?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="delete_lead">
+                                        <button type="submit" name="lead_id" value="{{ lead.id }}" class="action-btn btn-delete">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                        <input type="hidden" name="action" value="hide_lead">
+                                        <button type="submit" name="lead_id" value="{{ lead.id }}" class="action-btn btn-secondary">
+                                            <i class="fas fa-eye-slash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="modal fade" id="promoteModal{{ lead.id }}" tabindex="-1">
+                                <div class="modal-dialog modal-lg modal-dialog-centered">
+                                    <div class="modal-content">
+                                        <form method="POST" action="{% url 'home' %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="convert_lead">
+                                            <input type="hidden" name="lead_id" value="{{ lead.id }}">
+
+                                            <div class="modal-header">
+                                                <div>
+                                                    <h5 class="modal-title fw-bold text-success mb-0">Promote {{ lead.name }} to Customer</h5>
+                                                    <small class="text-muted">Select products from your saved product list.</small>
+                                                </div>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+
+                                            <div class="modal-body">
+                                                <div class="card border shadow-sm">
+                                                    <div class="card-header bg-light fw-semibold d-flex justify-content-between align-items-center">
+                                                        <span>Products Bought</span>
+                                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addRow('{{ lead.id }}')">+ Add Product</button>
+                                                    </div>
+                                                    <div class="card-body p-0">
+                                                        <div class="table-responsive">
+                                                            <table class="table table-sm align-middle mb-0">
+                                                                <thead class="table-light">
+                                                                    <tr>
+                                                                        <th style="width: 45%;" class="ps-3">Product</th>
+                                                                        <th style="width: 15%;">Qty</th>
+                                                                        <th style="width: 20%;">Line Total</th>
+                                                                        <th style="width: 10%;">Remove</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody id="productRows{{ lead.id }}">
+                                                                    <tr class="product-row">
+                                                                        <td class="ps-3">
+                                                                            <select name="product_ids[]" class="form-select product-select" required>
+                                                                                <option value="">Select product</option>
+                                                                                {% for product in products %}
+                                                                                <option value="{{ product.id }}" data-price="{{ product.unit_price_incl_gst }}">
+                                                                                    {{ product.name }} | ₹{{ product.unit_price_incl_gst }} | GST {{ product.gst_rate }}%
+                                                                                </option>
+                                                                                {% endfor %}
+                                                                            </select>
+                                                                        </td>
+                                                                        <td>
+                                                                            <input type="number" name="quantities[]" class="form-control quantity-input" value="1" min="1" required>
+                                                                        </td>
+                                                                        <td class="price-display fw-semibold text-muted">₹0.00</td>
+                                                                        <td>
+                                                                            <button type="button" class="btn btn-sm btn-outline-danger remove-row">✕</button>
+                                                                        </td>
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="row justify-content-end mt-4">
+                                                    <div class="col-md-5">
+                                                        <label class="form-label small fw-semibold text-muted">Total Revenue</label>
+                                                        <div class="input-group">
+                                                            <span class="input-group-text">₹</span>
+                                                            <input type="number" id="totalRevenue{{ lead.id }}" name="revenue" class="form-control fw-bold" readonly required>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-custom-success px-4">Confirm Conversion</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="activity-section">
+            <div class="activity-header">
+                <div>
+                    <h4><i class="fas fa-stream text-primary me-2"></i>Activity Feed</h4>
+                    <p class="text-muted mb-0 small">Team updates, notes, announcements and daily activity.</p>
+                </div>
+                <button class="btn btn-custom-primary rounded-3 px-4" data-bs-toggle="modal" data-bs-target="#addFeedModal">
+                    <i class="fas fa-plus me-2"></i>Post Update
+                </button>
+            </div>
+
+            <div class="timeline">
+                {% for feed in feeds %}
+                <div class="timeline-item">
+                    <div class="timeline-meta">
+                        <strong>@{{ feed.author.username }}</strong>
+                        <span class="mx-1">•</span>
+                        {{ feed.created_at|date:"M d, Y - h:i A" }}
+                    </div>
+                    <div class="timeline-title">{{ feed.title }}</div>
+                    <p class="timeline-description">{{ feed.description }}</p>
+                </div>
+                {% empty %}
+                <div class="text-center text-muted bg-light border rounded-3 p-4">
+                    <i class="fas fa-comments fs-3 mb-2 opacity-50"></i>
+                    <p class="mb-0">No activity yet. Create the first update.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="whatsappModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-success">
+                    <i class="fab fa-whatsapp me-2"></i>Send WhatsApp Message
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label text-muted fw-semibold small">To (Phone Number)</label>
+                    <input type="text" id="wa_phone" class="form-control bg-light" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted fw-semibold small">Message</label>
+                    <textarea id="wa_message" class="form-control" rows="5">Hello, 
+
+I am reaching out from Electranet Power Pvt Ltd regarding your recent inquiry. Let me know if you have any questions or if there is a good time to connect!</textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="btn_send_whatsapp" class="btn btn-success px-4">
+    <i class="fab fa-whatsapp me-2"></i>Open in WhatsApp
+</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addFeedModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" action="{% url 'home' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_feed">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Create Activity Post</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted fw-semibold small">Title</label>
+                        <input type="text" name="title" class="form-control" placeholder="Example: Followed up with client" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted fw-semibold small">Description</label>
+                        <textarea name="description" class="form-control" rows="4" placeholder="Write the update here..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-custom-primary px-4">Post Activity</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addLeadModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Add New Lead</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'home' %}">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_lead">
+                    {{ lead_form.as_p }}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-custom-primary px-4">Save Lead</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editLeadModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Edit Lead</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'home' %}">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="edit_lead">
+                    <input type="hidden" name="lead_id" id="edit_lead_id">
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted fw-semibold small">Name</label>
+                        <input type="text" name="name" id="edit_name" class="form-control" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted fw-semibold small">Email</label>
+                            <input type="email" name="email" id="edit_email" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted fw-semibold small">Phone</label>
+                            <input type="text" name="phone" id="edit_phone" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted fw-semibold small">Source</label>
+                            <input type="text" name="source" id="edit_source" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted fw-semibold small">Status</label>
+                            <select name="status" id="edit_status" class="form-select">
+                                <option value="New">New</option>
+                                <option value="Contacted">Contacted</option>
+                                <option value="Paperwork">Paperwork</option>
+                                <option value="Finalised">Finalised</option>
+                                <option value="Lost">Lost</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-custom-primary px-4">Update Details</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        
+        // --- 1. EDIT LEAD MODAL LOGIC ---
+        var editModal = document.getElementById('editLeadModal');
+        if (editModal) {
+            editModal.addEventListener('show.bs.modal', function (event) {
+                var button = event.relatedTarget;
+                document.getElementById('edit_lead_id').value = button.getAttribute('data-id');
+                document.getElementById('edit_name').value = button.getAttribute('data-name');
+                document.getElementById('edit_email').value = button.getAttribute('data-email');
+                document.getElementById('edit_phone').value = button.getAttribute('data-phone');
+                document.getElementById('edit_source').value = button.getAttribute('data-source');
+                document.getElementById('edit_status').value = button.getAttribute('data-status');
+            });
+        }
+
+        // --- 2. WHATSAPP MODAL LOGIC ---
+        var waModal = document.getElementById('whatsappModal');
+        if (waModal) {
+            waModal.addEventListener('show.bs.modal', function (event) {
+                var button = event.relatedTarget;
+                var phone = button.getAttribute('data-phone');
+                
+                // Strip out anything that isn't a number or a plus sign for WhatsApp API
+                var cleanPhone = phone ? phone.replace(/[^\d+]/g, '') : '';
+                document.getElementById('wa_phone').value = cleanPhone;
+            });
+
+            document.getElementById('btn_send_whatsapp').addEventListener('click', function() {
+                var phone = document.getElementById('wa_phone').value;
+                var message = document.getElementById('wa_message').value;
+
+                if (!phone) {
+                    alert("Please ensure the lead has a valid phone number.");
+                    return;
+                }
+
+                // Encode message so it handles spaces and line breaks properly in the URL
+                var encodedMessage = encodeURIComponent(message);
+                var waUrl = "https://wa.me/" + phone + "?text=" + encodedMessage;
+                
+                window.open(waUrl, '_blank');
+                
+                // Close the modal after clicking
+                var modalInstance = bootstrap.Modal.getInstance(waModal);
+                modalInstance.hide();
+            });
+        }
+
+        // --- 3. DYNAMIC KANBAN "VIEW MORE" LOGIC ---
+        const maxVisible = 3; 
+        document.querySelectorAll('.kanban-col').forEach(col => {
+            const cards = Array.from(col.children).filter(el => el.classList.contains('lead-card'));
+            
+            if (cards.length > maxVisible) {
+                for (let i = maxVisible; i < cards.length; i++) {
+                    cards[i].style.display = 'none';
+                    cards[i].classList.add('hidden-lead');
+                }
+
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-subtle w-100 mt-2 fw-medium text-primary bg-primary bg-opacity-10 border-0';
+                btn.innerHTML = `<i class="fas fa-chevron-down me-2"></i> View ${cards.length - maxVisible} More`;
+
+                btn.addEventListener('click', function() {
+                    const isExpanded = btn.classList.contains('expanded');
+                    if (!isExpanded) {
+                        col.querySelectorAll('.hidden-lead').forEach(c => c.style.display = 'block');
+                        btn.innerHTML = `<i class="fas fa-chevron-up me-2"></i> View Less`;
+                        btn.classList.add('expanded');
+                    } else {
+                        col.querySelectorAll('.hidden-lead').forEach(c => c.style.display = 'none');
+                        btn.innerHTML = `<i class="fas fa-chevron-down me-2"></i> View ${cards.length - maxVisible} More`;
+                        btn.classList.remove('expanded');
+                    }
+                });
+                col.appendChild(btn);
+            }
+        });
+
+        // --- 4. PROMOTE MODAL PRICING LOGIC ---
+        document.querySelectorAll("[id^='productRows']").forEach(container => {
+            let leadId = container.id.replace("productRows", "");
+            attachEvents(leadId);
+            updateTotal(leadId);
+        });
+    });
+
+    // Helper functions for Product Rows
+    function updateRow(row) {
+        let select = row.querySelector(".product-select");
+        let qty = row.querySelector(".quantity-input");
+        let priceDisplay = row.querySelector(".price-display");
+
+        let selected = select.options[select.selectedIndex];
+        let price = parseFloat(selected.getAttribute("data-price")) || 0;
+        let quantity = parseInt(qty.value) || 0;
+        let total = price * quantity;
+        priceDisplay.innerText = "₹" + total.toFixed(2);
+        return total;
+    }
+
+    function updateTotal(leadId) {
+        let rows = document.querySelectorAll("#productRows" + leadId + " .product-row");
+        let total = 0;
+        rows.forEach(row => {
+            total += updateRow(row);
+        });
+        document.getElementById("totalRevenue" + leadId).value = total.toFixed(2);
+    }
+
+    function attachEvents(leadId) {
+        let container = document.getElementById("productRows" + leadId);
+        container.querySelectorAll(".product-select, .quantity-input").forEach(el => {
+            el.onchange = () => updateTotal(leadId);
+            el.oninput = () => updateTotal(leadId);
+        });
+        container.querySelectorAll(".remove-row").forEach(btn => {
+            btn.onclick = function () {
+                let rows = container.querySelectorAll(".product-row");
+                if (rows.length > 1) {
+                    this.closest("tr").remove();
+                    updateTotal(leadId);
+                }
+            }
+        });
+    }
+
+    function addRow(leadId) {
+        let container = document.getElementById("productRows" + leadId);
+        let firstRow = container.querySelector(".product-row");
+        let newRow = firstRow.cloneNode(true);
+        newRow.querySelector(".product-select").value = "";
+        newRow.querySelector(".quantity-input").value = 1;
+        newRow.querySelector(".price-display").innerText = "₹0";
+        container.appendChild(newRow);
+        attachEvents(leadId);
+    }
+</script>
+{% endblock %}

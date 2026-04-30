@@ -1,0 +1,33 @@
+<h2>Client: {{ client.converted_lead.lead.name }}</h2>
+
+<p><b>Billed:</b> {{ client.billed_amount }}</p>
+<p><b>Total Paid:</b> {{ client.total_paid }}</p>
+<p><b>Balance:</b> {{ client.balance }}</p>
+
+<hr>
+
+<h3>Add Payment</h3>
+<form method="POST">
+    {% csrf_token %}
+    <input type="number" name="amount" placeholder="Amount" required>
+    <input type="date" name="date" required>
+    <button type="submit">Add Payment</button>
+</form>
+
+<hr>
+
+<h3>Payment History</h3>
+
+<table border="1">
+    <tr>
+        <th>Date</th>
+        <th>Amount</th>
+    </tr>
+
+    {% for payment in payments %}
+    <tr>
+        <td>{{ payment.paid_on }}</td>
+        <td>{{ payment.amount }}</td>
+    </tr>
+    {% endfor %}
+</table>

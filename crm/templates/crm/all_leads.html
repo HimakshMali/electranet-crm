@@ -1,0 +1,244 @@
+{% extends 'crm/base.html' %}
+
+{% block content %}
+<div class="leads-dashboard">
+
+    <div class="dashboard-header">
+        <h1>Lead Management</h1>
+
+        <form method="GET" action="" class="search-bar">
+            <input type="text" name="name" placeholder="Search by name..." value="{{ request.GET.name }}"
+                class="search-input">
+            <input type="text" name="phone" placeholder="Search by number..." value="{{ request.GET.phone }}"
+                class="search-input">
+
+           <select name="status" class="search-select">
+    <option value="">All Statuses</option>
+
+    <option value="New" {% if request.GET.status == 'New' %}selected{% endif %}>New</option>
+
+    <option value="Contacted" {% if request.GET.status == 'Contacted' %}selected{% endif %}>Contacted</option>
+
+    <option value="Paperwork" {% if request.GET.status == 'Paperwork' %}selected{% endif %}>Paperwork</option>
+
+    <option value="Finalised" {% if request.GET.status == 'Finalised' %}selected{% endif %}>Finalised</option>
+
+    <option value="Lost" {% if request.GET.status == 'Lost' %}selected{% endif %}>Lost</option>
+</select>
+
+            <button type="submit" class="btn-search">Search</button>
+            <a href="{% url 'all_leads' %}" class="btn-clear">Clear</a>
+        </form>
+    </div>
+
+    <div class="table-card">
+        {% if leads %}
+        <table class="corporate-table">
+            <thead>
+                <tr>
+                    <th>
+                        <a
+                            href="?name={{ request.GET.name }}&phone={{ request.GET.phone }}&status={{ request.GET.status }}&sort={% if current_sort == 'name' %}-name{% else %}name{% endif %}">
+                            Name
+                        </a>
+                    </th>
+                    <th>
+                        <a
+                            href="?name={{ request.GET.name }}&phone={{ request.GET.phone }}&status={{ request.GET.status }}&sort={% if current_sort == 'email' %}-email{% else %}email{% endif %}">
+                            Email
+                        </a>
+                    </th>
+                    <th>
+                        <a
+                            href="?name={{ request.GET.name }}&phone={{ request.GET.phone }}&status={{ request.GET.status }}&sort={% if current_sort == 'phone' %}-phone{% else %}phone{% endif %}">
+                            Phone
+                        </a>
+                    </th>
+                    <th>
+                        <a
+                            href="?name={{ request.GET.name }}&phone={{ request.GET.phone }}&status={{ request.GET.status }}&sort={% if current_sort == 'source' %}-source{% else %}source{% endif %}">
+                            Source
+                        </a>
+                    </th>
+                    <th>
+                        <a
+                            href="?name={{ request.GET.name }}&phone={{ request.GET.phone }}&status={{ request.GET.status }}&sort={% if current_sort == 'status' %}-status{% else %}status{% endif %}">
+                            Status
+                        </a>
+                    </th>
+                    <th>
+                        <a
+                            href="?name={{ request.GET.name }}&phone={{ request.GET.phone }}&status={{ request.GET.status }}&sort={% if current_sort == 'created_at' %}-created_at{% else %}created_at{% endif %}">
+                            Created
+                        </a>
+                    </th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for lead in leads %}
+                <tr>
+                    <td class="font-medium">{{ lead.name }}</td>
+                    <td class="text-muted">{{ lead.email }}</td>
+                    <td>{{ lead.phone }}</td>
+                    <td>{{ lead.source }}</td>
+                    <td>
+                        <span class="status-badge status-{{ lead.status|lower|default:'default' }}">
+                            {{ lead.status }}
+                        </span>
+                    </td>
+                    <td class="text-muted">{{ lead.created_at|date:"M d, Y" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <p>No leads found matching your criteria.</p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<style>
+    .leads-dashboard {
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        padding: 24px;
+        max-width: 1200px;
+        margin: 0 auto;
+        color: #334155;
+    }
+
+    .dashboard-header h1 {
+        font-size: 24px;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 20px;
+    }
+
+    /* Search */
+    .search-bar {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+    }
+
+    .search-input,
+    .search-select {
+        padding: 10px 14px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 14px;
+        background: #fff;
+        min-width: 200px;
+    }
+
+    .btn-search {
+        background: #2563eb;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+    }
+
+    .btn-clear {
+        background: #f1f5f9;
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        color: #64748b;
+    }
+
+    /* Table */
+    .table-card {
+        background: #fff;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #f1f5f9;
+    }
+
+    .corporate-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .corporate-table th {
+        background: #f8fafc;
+        padding: 16px;
+        font-size: 13px;
+        color: #64748b;
+    }
+
+    .corporate-table th a {
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .corporate-table th a:hover {
+        color: #2563eb;
+    }
+
+    .corporate-table td {
+        padding: 16px;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .corporate-table tr:hover {
+        background: #f8fafc;
+    }
+
+    .font-medium {
+        font-weight: 500;
+    }
+
+    .text-muted {
+        color: #64748b;
+    }
+
+    /* Status */
+    .status-badge {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+    }
+
+    .status-new {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .status-contacted {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .status-paperwork {
+        background: #e0e7ff;
+        color: #3730a3;
+    }
+
+    .status-finalised {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .status-default {
+        background: #f1f5f9;
+        color: #475569;
+
+    }
+
+    .status-lost {
+    background: #fee2e2;
+    color: #991b1b;
+    }
+    
+    .empty-state {
+        padding: 40px;
+        text-align: center;
+    }
+</style>
+
+{% endblock %}

@@ -1,0 +1,383 @@
+{% extends "crm/base.html" %}
+
+{% block title %}Salary Profile{% endblock %}
+
+{% block content %}
+<style>
+    /* --- Professional SaaS Theme Variables --- */
+    :root {
+        --bg-body: #f8fafc;
+        --bg-surface: #ffffff;
+        --border-soft: #e2e8f0;
+        --text-main: #1e293b;
+        --text-muted: #64748b;
+        --primary: #2563eb;
+        --primary-hover: #1d4ed8;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --shadow-subtle: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+        --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+        --radius-lg: 12px;
+        --radius-md: 8px;
+    }
+
+    .dashboard-main {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        color: var(--text-main);
+        padding-bottom: 50px;
+    }
+
+    /* --- Employee Header Card --- */
+    .employee-header {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        padding: 24px;
+        box-shadow: var(--shadow-subtle);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    .employee-info h3 {
+        margin: 0 0 4px 0;
+        font-weight: 700;
+        font-size: 1.5rem;
+        letter-spacing: -0.02em;
+    }
+
+    .employee-info p {
+        margin: 0;
+        color: var(--text-muted);
+        font-size: 0.95rem;
+    }
+
+    .salary-badge {
+        background: #ecfdf5;
+        color: #059669;
+        border: 1px solid #a7f3d0;
+        padding: 8px 16px;
+        border-radius: 50px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* --- Modern Cards & Forms --- */
+    .saas-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-subtle);
+        height: 100%;
+    }
+
+    .saas-card-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border-soft);
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+    }
+
+    .saas-card-body {
+        padding: 20px;
+    }
+
+    .form-label-custom {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+    }
+
+    .form-control-custom {
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-md);
+        padding: 10px 12px;
+        font-size: 0.95rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-control-custom:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        outline: none;
+    }
+
+    .btn-saas-primary {
+        background: var(--primary);
+        color: white;
+        border-radius: var(--radius-md);
+        font-weight: 600;
+        padding: 10px 20px;
+        border: none;
+        width: 100%;
+        transition: all 0.2s;
+    }
+
+    .btn-saas-primary:hover {
+        background: var(--primary-hover);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+    }
+
+    /* --- Vertical Timeline CSS --- */
+    .timeline {
+        position: relative;
+        padding-left: 32px;
+        margin-top: 10px;
+    }
+
+    .timeline::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 11px; /* Centers the 2px line within the 24px dot */
+        width: 2px;
+        background: var(--border-soft);
+    }
+
+    .timeline-item {
+        position: relative;
+        margin-bottom: 24px;
+    }
+
+    /* Dynamic Timeline Dots */
+    .timeline-dot {
+        position: absolute;
+        left: -32px;
+        top: 4px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: white;
+        border: 4px solid var(--border-soft);
+        z-index: 1;
+    }
+    
+    .timeline-item.status-paid .timeline-dot { border-color: var(--success); }
+    .timeline-item.status-pending .timeline-dot { border-color: var(--warning); }
+    .timeline-item.status-unpaid .timeline-dot { border-color: var(--danger); }
+
+    /* Timeline Content Box */
+    .timeline-content {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-md);
+        padding: 16px;
+        box-shadow: var(--shadow-subtle);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .timeline-content:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+        border-color: #cbd5e1;
+    }
+
+    .timeline-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 12px;
+        border-bottom: 1px dashed var(--border-soft);
+    }
+
+    .timeline-date {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: var(--text-main);
+    }
+
+    /* Financial Breakdown Grid */
+    .finance-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 12px;
+    }
+
+    .finance-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .finance-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .finance-value { font-weight: 600; font-size: 0.95rem; }
+    .val-bonus { color: var(--success); }
+    .val-deduct { color: var(--danger); }
+    .val-net { font-size: 1.1rem; font-weight: 800; color: var(--primary); }
+
+    /* Custom Badges */
+    .badge-status {
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    .badge-paid { background: #ecfdf5; color: #059669; }
+    .badge-pending { background: #fffbeb; color: #d97706; }
+    .badge-unpaid { background: #fef2f2; color: #dc2626; }
+</style>
+
+<div class="dashboard-main mt-4 container-fluid">
+
+    <div class="employee-header">
+        <div class="employee-info d-flex align-items-center gap-3">
+            <div style="width: 50px; height: 50px; background: var(--bg-column); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--primary); font-weight: bold;">
+                {{ employee.user.username|make_list|first|upper }}
+            </div>
+            <div>
+                <h3>{{ employee.user.username }}</h3>
+                <p><i class="fas fa-briefcase me-1"></i> {{ employee.role }} <span class="mx-2">•</span> <i class="fas fa-calendar-alt me-1"></i> Joined {{ employee.joined_since }}</p>
+            </div>
+        </div>
+        <div class="salary-badge shadow-sm">
+            <i class="fas fa-wallet"></i> Base: ₹{{ employee.base_salary }}
+        </div>
+    </div>
+
+    <div class="row g-4">
+        
+        <div class="col-lg-4">
+            <div class="saas-card">
+                <div class="saas-card-header">
+                    <i class="fas fa-plus-circle me-2 text-primary"></i> Record Salary
+                </div>
+                <div class="saas-card-body">
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label-custom">Month</label>
+                                <select name="month" class="form-control form-control-custom" required>
+                                    <option>January</option> <option>February</option> <option>March</option>
+                                    <option>April</option> <option>May</option> <option>June</option>
+                                    <option>July</option> <option>August</option> <option>September</option>
+                                    <option>October</option> <option>November</option> <option>December</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label-custom">Year</label>
+                                <input type="number" name="year" class="form-control form-control-custom" value="{% now 'Y' %}" required>
+                            </div>
+                            
+                            <div class="col-12">
+                                <label class="form-label-custom">Base Salary (₹)</label>
+                                <input type="number" step="0.01" name="base_salary" class="form-control form-control-custom" value="{{ employee.base_salary }}" required>
+                            </div>
+
+                            <div class="col-6">
+                                <label class="form-label-custom">Bonus (₹)</label>
+                                <input type="number" step="0.01" name="total_bonus" class="form-control form-control-custom" placeholder="0.00">
+                            </div>
+
+                            <div class="col-6">
+                                <label class="form-label-custom">Deductions (₹)</label>
+                                <input type="number" step="0.01" name="total_deductions" class="form-control form-control-custom" placeholder="0.00">
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label-custom">Status</label>
+                                <select name="status" class="form-control form-control-custom">
+                                    <option value="paid">Paid</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="unpaid">Unpaid</option>
+                                </select>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label-custom">Notes</label>
+                                <textarea name="notes" class="form-control form-control-custom" rows="2" placeholder="Optional notes..."></textarea>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-saas-primary mt-4">
+                            <i class="fas fa-save me-2"></i> Save Record
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="saas-card">
+                <div class="saas-card-header">
+                    <i class="fas fa-history me-2 text-primary"></i> Salary History
+                </div>
+                <div class="saas-card-body">
+                    
+                    {% if salary_records %}
+                    <div class="timeline">
+                        {% for salary in salary_records %}
+                        <div class="timeline-item status-{{ salary.status|lower }}">
+                            <div class="timeline-dot"></div>
+                            
+                            <div class="timeline-content">
+                                <div class="timeline-header">
+                                    <div class="timeline-date">{{ salary.month }} {{ salary.year }}</div>
+                                    <span class="badge-status badge-{{ salary.status|lower }}">
+                                        {{ salary.status }}
+                                    </span>
+                                </div>
+
+                                <div class="finance-grid">
+                                    <div class="finance-item">
+                                        <span class="finance-label">Base</span>
+                                        <span class="finance-value">₹{{ salary.base_salary }}</span>
+                                    </div>
+                                    <div class="finance-item">
+                                        <span class="finance-label">Bonus</span>
+                                        <span class="finance-value val-bonus">+ ₹{{ salary.total_bonus|default:"0" }}</span>
+                                    </div>
+                                    <div class="finance-item">
+                                        <span class="finance-label">Deductions</span>
+                                        <span class="finance-value val-deduct">- ₹{{ salary.total_deductions|default:"0" }}</span>
+                                    </div>
+                                    <div class="finance-item">
+                                        <span class="finance-label">Net Pay</span>
+                                        <span class="finance-value val-net">₹{{ salary.net_salary }}</span>
+                                    </div>
+                                </div>
+
+                                {% if salary.notes %}
+                                <div class="mt-3 pt-2 border-top text-muted" style="font-size: 0.85rem;">
+                                    <i class="fas fa-comment-alt me-1 opacity-50"></i> {{ salary.notes }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="fas fa-folder-open mb-3" style="font-size: 3rem; opacity: 0.2;"></i>
+                        <p>No salary records found for this employee yet.</p>
+                    </div>
+                    {% endif %}
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,177 @@
+{% load crispy_forms_tags %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add Employee</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+            background:
+                linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.55)),
+                url("https://plus.unsplash.com/premium_photo-1764459931051-d7da922bd5de?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D");
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 45px 20px;
+        }
+
+        .employee-box {
+            width: 720px;
+            max-width: 100%;
+            padding: 42px 54px;
+            border-radius: 18px;
+            background: rgba(15, 23, 42, 0.58);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.18);
+            box-shadow: 0 30px 80px rgba(0,0,0,0.48);
+            color: white;
+        }
+
+        .employee-box h2 {
+            text-align: center;
+            margin-bottom: 34px;
+            font-size: 34px;
+            font-weight: 800;
+            letter-spacing: -0.8px;
+        }
+
+        .form-text,
+        .helptext,
+        small,
+        ul,
+        .alert,
+        .invalid-feedback {
+            display: none !important;
+        }
+
+        label {
+            color: rgba(255,255,255,0.92);
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 7px;
+        }
+
+        .form-group,
+        .mb-3,
+        p {
+            margin-bottom: 22px !important;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100% !important;
+            padding: 13px 4px !important;
+            background: transparent !important;
+            border: none !important;
+            border-bottom: 1.8px solid rgba(255,255,255,0.68) !important;
+            outline: none !important;
+            color: white !important;
+            font-size: 15px !important;
+            font-weight: 500;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-bottom-color: #ffffff !important;
+            box-shadow: none !important;
+        }
+
+        input::placeholder,
+        textarea::placeholder {
+            color: rgba(255,255,255,0.6);
+        }
+
+        select option {
+            color: #111;
+        }
+
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+
+        .asteriskField {
+            margin-left: 2px;
+        }
+
+        .btn-create {
+            width: 100%;
+            margin-top: 12px;
+            padding: 15px;
+            border: none;
+            border-radius: 6px;
+            background: white;
+            color: #111827;
+            font-size: 15px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: 0.2s ease;
+        }
+
+        .btn-create:hover {
+            background: #e5e7eb;
+            transform: translateY(-1px);
+        }
+
+        .back-link {
+            display: block;
+            margin-top: 24px;
+            text-align: center;
+            color: rgba(255,255,255,0.92);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .employee-box {
+                width: 100%;
+                padding: 34px 28px;
+            }
+
+            .employee-box h2 {
+                font-size: 30px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="employee-box">
+        <h2>Add Employee</h2>
+
+        <form method="POST">
+            {% csrf_token %}
+            {{ form|crispy }}
+
+            <button type="submit" class="btn-create">Create Employee</button>
+        </form>
+
+        <a href="{% url 'employees_list' %}" class="back-link">← Back to Employees</a>
+    </div>
+
+</body>
+</html>

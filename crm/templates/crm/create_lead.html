@@ -1,0 +1,8 @@
+{% extends 'crm/base.html' %} {% block title %}create post{% endblock %} 
+{% load crispy_forms_tags %} {% block content %}
+<form method="post">
+  {% csrf_token %}{{form|crispy}}
+  
+  <button type="submit" class="btn btn-success">create lead</button>
+</form>
+{% endblock %}

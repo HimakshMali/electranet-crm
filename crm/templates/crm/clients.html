@@ -1,0 +1,23 @@
+<h2>Clients</h2>
+
+<table border="1">
+    <tr>
+        <th>Name</th>
+        <th>Billed</th>
+        <th>Paid</th>
+        <th>Balance</th>
+        <th>Action</th>
+    </tr>
+
+    {% for client in clients %}
+    <tr>
+        <td>{{ client.converted_lead.lead.name }}</td>
+        <td>{{ client.billed_amount }}</td>
+        <td>{{ client.total_paid }}</td>
+        <td>{{ client.balance }}</td>
+        <td>
+            <a href="{% url 'client_detail' client.id %}">View Ledger</a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>

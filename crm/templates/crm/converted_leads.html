@@ -1,0 +1,331 @@
+{% extends "crm/base.html" %}
+{% block content %}
+
+<style>
+    body {
+        background: #f4f6f9;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, #111827, #1f2937);
+        color: rgb(223, 222, 222);
+        padding: 28px;
+        border-radius: 18px;
+        margin-bottom: 28px;
+    }
+
+    .customer-card {
+        border: none;
+        border-radius: 18px;
+        overflow: hidden;
+        transition: 0.2s ease;
+    }
+
+    .customer-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+    }
+
+    .customer-avatar {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        background: #111827;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 18px;
+    }
+
+    .info-label {
+        color: #6b7280;
+        font-size: 13px;
+        margin-bottom: 2px;
+    }
+
+    .info-value {
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 12px;
+    }
+
+    .money-box {
+        background: #f9fafb;
+        border-radius: 14px;
+        padding: 14px;
+        margin-bottom: 12px;
+    }
+
+    .payment-history-box {
+        max-height: 220px;
+        overflow-y: auto;
+    }
+
+    .payment-item {
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 10px 12px;
+        margin-bottom: 8px;
+    }
+
+    .btn-soft-danger {
+        background: #fee2e2;
+        color: #b91c1c;
+        border: none;
+    }
+
+    .btn-soft-danger-invoice {
+        background: #8feb94;
+        color: #046903;
+        border: none;
+    }
+
+
+    .btn-soft-danger:hover {
+        background: #fecaca;
+        color: #991b1b;
+    }
+
+    .status-pill {
+        font-size: 12px;
+        border-radius: 999px;
+        padding: 5px 10px;
+    }
+</style>
+
+<div class="container mt-4 mb-5">
+
+    <div class="page-header shadow-sm">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h2 class="fw-bold mb-1">Converted Customers</h2>
+                <p class="mb-0 text-white-50">
+                    add transactions here to update in ledger
+                </p>
+            </div>
+
+            <span class="badge bg-success px-3 py-2 rounded-pill">
+                {{ leads|length }} Customers
+            </span>
+        </div>
+    </div>
+
+    <div class="row g-4">
+
+        {% for lead in leads %}
+        <div class="col-md-6 col-xl-4">
+            <div class="card customer-card shadow-sm h-100">
+                <div class="card-body p-4">
+
+                    <!-- Header -->
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="d-flex gap-3 align-items-center">
+                            <div class="customer-avatar">
+                                {{ lead.lead.name|slice:":1"|upper }}
+                            </div>
+
+                            <div>
+                                <h5 class="fw-bold mb-0">{{ lead.lead.name }}</h5>
+                                <small class="text-muted">{{ lead.lead.source }}</small>
+                            </div>
+                        </div>
+
+                        <span class="badge bg-success status-pill">
+                            Won
+                        </span>
+                    </div>
+
+                    <hr>
+
+                    <!-- Contact Info -->
+                    <div class="mb-3">
+                        <div class="info-label">Email</div>
+                        <div class="info-value">
+                            {{ lead.lead.email|default:"Not provided" }}
+                        </div>
+
+                        <div class="info-label">Phone</div>
+                        <div class="info-value">
+                            {{ lead.lead.phone|default:"Not provided" }}
+                        </div>
+
+                        <div class="info-label">Product Bought</div>
+                        <div class="info-value">
+                            <span class="badge bg-dark px-3 py-2">
+                                {{ lead.product_bought }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Revenue -->
+                    <div class="money-box">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted">Revenue</span>
+                            <span class="fw-bold text-success fs-5">
+                                ₹{{ lead.revenue_from_customer }}
+                            </span>
+                        </div>
+                    </div>
+
+                    {% if lead.client %}
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-4">
+                            <div class="money-box text-center">
+                                <div class="info-label">Billed</div>
+                                <div class="fw-bold">₹{{ lead.client.billed_amount }}</div>
+                            </div>
+                        </div>
+
+                        <div class="col-4">
+                            <div class="money-box text-center">
+                                <div class="info-label">Paid</div>
+                                <div class="fw-bold text-success">
+                                    ₹{{ lead.client.total_paid }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-4">
+                            <div class="money-box text-center">
+                                <div class="info-label">Due</div>
+                                <div class="fw-bold text-danger">
+                                    ₹{{ lead.client.remaining_amount }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-outline-dark btn-sm w-100 mb-3 rounded-pill" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#paymentBox{{ lead.client.id }}">
+                        Add / View Payments
+                    </button>
+
+                    <div class="collapse" id="paymentBox{{ lead.client.id }}">
+
+                        <form method="POST" class="mb-3">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="add_payment">
+                            <input type="hidden" name="client_id" value="{{ lead.client.id }}">
+
+                            <input type="number" name="amount" class="form-control mb-2 rounded-pill"
+                                placeholder="Enter payment amount" required>
+
+                            <input type="text" name="note" class="form-control mb-2 rounded-pill"
+                                placeholder="Payment note optional">
+
+                            <button type="submit" class="btn btn-success btn-sm w-100 rounded-pill">
+                                Save Payment
+                            </button>
+                        </form>
+
+                        <!-- INVOICE COPY TYPE -->
+                        <h5 class="fw-bold mb-3">Invoice Copy Type</h5>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label class="form-label">Select Invoice Type</label>
+                                <select name="invoice_copy_type" class="form-select" required>
+                                    <option value="Original">Original</option>
+                                    <option value="Duplicate">Duplicate</option>
+                                    <option value="Triplicate">Triplicate</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <h6 class="fw-bold mb-2">Payment History</h6>
+
+                        <div class="payment-history-box">
+                            {% for payment in lead.client.payments.all %}
+                            <div class="payment-item">
+                                <div class="d-flex justify-content-between">
+                                    <strong class="text-success">₹{{ payment.amount }}</strong>
+                                    <small class="text-muted">
+                                        {{ payment.paid_at|date:"d M Y" }}
+                                    </small>
+                                </div>
+
+                                <small class="text-muted">
+                                    {{ payment.paid_at|date:"H:i" }}
+                                </small>
+
+                                {% if payment.note %}
+                                <br>
+                                <small>{{ payment.note }}</small>
+                                {% endif %}
+                            </div>
+                            {% empty %}
+                            <p class="text-muted small mb-0">
+                                No payments added yet.
+                            </p>
+                            {% endfor %}
+                        </div>
+
+                    </div>
+
+                    {% else %}
+
+                    <div class="alert alert-warning mt-3 rounded-3">
+                        Client record not created for this converted lead.
+                    </div>
+
+                    {% endif %}
+
+                    <hr>
+
+                    <!-- Footer -->
+                    <div class="d-flex justify-content-between align-items-end gap-2">
+                        <div>
+                            <p class="small text-muted mb-1">
+                                Closed by: {{ lead.closed_by.username }}
+                            </p>
+
+                            <p class="small text-muted mb-0">
+                                {{ lead.closed_at|date:"d M Y, H:i" }}
+                            </p>
+                        </div>
+
+                        <form method="POST"
+                            onsubmit="return confirm('Are you sure you want to delete this converted lead?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete_converted_lead">
+                            <input type="hidden" name="converted_lead_id" value="{{ lead.id }}">
+
+                            <button type="submit" class="btn btn-soft-danger btn-sm rounded-pill px-3">
+                                Delete
+                            </button>
+
+
+                        </form>
+                        <a href="{% url 'customer_invoice' lead.id %}"
+                            class="btn btn-soft-danger-invoice btn-sm rounded-pill px-3">
+                            Make Invoice
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        {% empty %}
+
+        <div class="col-12">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body text-center py-5">
+                    <h4 class="fw-bold">No converted leads yet</h4>
+                    <p class="text-muted mb-0">
+                        Once a lead is finalised, it will appear here.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        {% endfor %}
+
+    </div>
+</div>
+
+{% endblock %}

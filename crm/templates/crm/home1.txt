@@ -1,0 +1,95 @@
+{% extends "crm/base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <!-- 🔹 Welcome Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h3 class="card-title">Welcome, {{ user.username }} 👋</h3>
+            <p class="mb-1"><strong>Email:</strong> {{ user.email }}</p>
+
+            {% if is_admin %}
+                <span class="badge bg-success">Admin</span>
+            {% else %}
+                <span class="badge bg-secondary">Employee</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Create Leads</h5>
+
+            <a href="{% url 'create_lead' %}" class="btn btn-primary">
+                ➕ Add Lead
+            </a>
+        </div>
+    </div>
+
+    <h2>Current Leads</h2>
+
+{% for lead in leads %}
+<div class="card mt-2">
+    <div class="card-header"><strong>{{ lead.name }}</strong></div>
+    <div>
+        <!-- A simple spell but quiet effecive-->
+        {% if request.user == lead.added_by %}
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" name="lead_id" value="{{ lead.id }}" class="btn btn-sm btn-outline-danger">Delete
+
+            </button>
+
+            <button type="submit" name="lead_id" value="{{ lead.id }}" class="btn btn-sm btn-outline-danger">Delete
+
+            </button>
+        </form>
+
+        {% endif %}
+    </div>
+   
+    
+    <div class="card-body">
+        <p><strong>Source:</strong> {{ lead.source }}</p>
+        <p><strong>Status:</strong> {{ lead.status }}</p>
+        <p><strong>Email:</strong> {{ lead.email }}</p>
+        <p><strong>Phone:</strong> {{ lead.phone }}</p>
+        <p><strong>Created by:</strong> {{ lead.added_by.username }}</p>
+    </div>
+</div>
+{% empty %}
+<p>No leads yet.</p>
+{% endfor %}
+
+
+    <!-- 🔹 Admin Actions -->
+    {% if is_admin %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Admin Actions</h5>
+
+            <a href="{% url 'add_employee' %}" class="btn btn-primary">
+                ➕ Add Employee
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 🔹 General Actions -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title">Account</h5>
+
+            <a href="{% url 'logout' %}" class="btn btn-danger">
+                Logout
+            </a>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

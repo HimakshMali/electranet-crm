@@ -1,0 +1,250 @@
+{% extends "crm/base.html" %}
+
+{% block title %}Lead Details - {{ lead.name }}{% endblock %}
+
+{% block content %}
+<style>
+    /* --- CSS Variables for Corporate Light Theme --- */
+    :root {
+        --bg-body: #f8fafc;
+        --bg-surface: #ffffff;
+        --border-soft: #e5e7eb;
+        --text-dark: #111827;
+        --text-muted: #6b7280;
+        --primary-color: #2563eb;
+        --primary-light: #eff6ff;
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        --radius-lg: 12px;
+        --radius-md: 8px;
+    }
+
+    .dashboard-main {
+        font-family: 'Inter', -apple-system, sans-serif;
+        background-color: var(--bg-body);
+        min-height: 100vh;
+        color: var(--text-dark);
+    }
+
+    /* --- Lead Profile Header --- */
+    .profile-header {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        padding: 24px 32px;
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 32px;
+    }
+
+    .profile-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin-bottom: 12px;
+        letter-spacing: -0.01em;
+    }
+
+    .profile-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border-soft);
+    }
+
+    .info-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: var(--text-muted);
+        font-size: 0.95rem;
+    }
+
+    .info-item i {
+        color: var(--primary-color);
+        background: var(--primary-light);
+        padding: 8px;
+        border-radius: 6px;
+        width: 32px;
+        text-align: center;
+    }
+
+    /* --- Modern Timeline --- */
+    .timeline-section {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        padding: 32px;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .timeline-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .timeline {
+        position: relative;
+        padding-left: 32px;
+    }
+
+    /* Vertical line */
+    .timeline::before {
+        content: "";
+        position: absolute;
+        left: 7px;
+        top: 8px;
+        bottom: 0;
+        width: 2px;
+        background: #e2e8f0;
+    }
+
+    .timeline-item {
+        position: relative;
+        margin-bottom: 28px;
+    }
+
+    /* Dot */
+    .timeline-item::before {
+        content: "";
+        position: absolute;
+        left: -30px;
+        top: 6px;
+        width: 12px;
+        height: 12px;
+        background: var(--bg-surface);
+        border: 2px solid var(--primary-color);
+        border-radius: 50%;
+        z-index: 1;
+        box-shadow: 0 0 0 4px var(--primary-light);
+    }
+
+    .timeline-content {
+        background: #f8fafc;
+        padding: 16px 20px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-soft);
+        transition: all 0.2s ease;
+    }
+
+    .timeline-content:hover {
+        box-shadow: var(--shadow-md);
+        border-color: #cbd5e1;
+        background: var(--bg-surface);
+    }
+
+    .timeline-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .timeline-header strong {
+        font-size: 0.95rem;
+        color: var(--text-dark);
+    }
+
+    .time {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        font-weight: 500;
+    }
+
+    .note {
+        margin: 12px 0;
+        padding: 12px 16px;
+        background: var(--bg-surface);
+        border-left: 3px solid var(--primary-color);
+        border-radius: 0 var(--radius-md) var(--radius-md) 0;
+        font-size: 0.9rem;
+        color: #475569;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .timeline-footer {
+        color: #94a3b8;
+        font-size: 0.8rem;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+</style>
+
+<div class="dashboard-main pt-4 pb-5">
+    <div class="container-fluid max-w-5xl mx-auto">
+
+        <a href="{% url 'home' %}" class="btn btn-link text-muted text-decoration-none px-0 mb-3 d-inline-flex align-items-center">
+            <i class="fas fa-arrow-left me-2"></i> Back to Pipeline
+        </a>
+
+        <div class="profile-header">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                <div>
+                    <h2 class="profile-title">{{ lead.name }}</h2>
+                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-3 py-1 fw-medium">
+                        {{ lead.status }}
+                    </span>
+                </div>
+                <button class="btn btn-outline-secondary bg-white shadow-sm border-soft rounded-3 px-3 py-2">
+                    <i class="fas fa-pen me-2"></i>Edit Lead
+                </button>
+            </div>
+
+            <div class="profile-info-grid">
+                <div class="info-item">
+                    <i class="fas fa-phone-alt"></i>
+                    <span class="fw-medium">{{ lead.phone|default:"No Phone Provided" }}</span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-envelope"></i>
+                    <span class="fw-medium">{{ lead.email|default:"No Email Provided" }}</span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-bullhorn"></i>
+                    <span class="fw-medium">Source: {{ lead.source|default:"Direct" }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="timeline-section">
+            <h4 class="timeline-title">
+                <i class="fas fa-history text-primary"></i> Activity Timeline
+            </h4>
+
+            <div class="timeline mt-4">
+                {% for act in activities %}
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <div class="timeline-header">
+                            <strong>{{ act.get_activity_type_display }}</strong>
+                            <span class="time"><i class="far fa-clock me-1"></i>{{ act.activity_time }}</span>
+                        </div>
+
+                        {% if act.note %}
+                        <div class="note">
+                            {{ act.note }}
+                        </div>
+                        {% endif %}
+
+                        <div class="timeline-footer mt-2">
+                            <i class="fas fa-user-circle"></i> Added by {{ act.created_by.username }}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center p-5 border rounded-3 bg-light">
+                    <i class="fas fa-clipboard-list fs-1 text-muted opacity-50 mb-3"></i>
+                    <p class="text-muted mb-0">No activity logged for this lead yet.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

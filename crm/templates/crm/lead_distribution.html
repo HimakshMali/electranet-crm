@@ -1,0 +1,200 @@
+{% extends "crm/base.html" %}
+
+{% block title %}Lead Distribution{% endblock %}
+
+{% block content %}
+
+<style>
+    .lead-distribution-wrapper {
+        min-height: 75vh;
+        background: #f8fafc;
+        padding: 30px;
+    }
+
+    .lead-distribution-card {
+        width: 100%;
+        max-width: 850px;
+        margin: auto;
+        background: #ffffff;
+        border-radius: 22px;
+        padding: 45px;
+        text-align: center;
+        box-shadow: 0 20px 45px rgba(15, 23, 42, 0.12);
+        border: 1px solid #e5e7eb;
+    }
+
+    .lead-icon {
+        width: 85px;
+        height: 85px;
+        margin: 0 auto 22px;
+        border-radius: 50%;
+        background: #fef3c7;
+        color: #d97706;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 34px;
+    }
+
+    .fetch-btn {
+        background: #facc15;
+        color: #111827;
+        border: none;
+        padding: 15px 34px;
+        border-radius: 14px;
+        font-size: 16px;
+        font-weight: 700;
+        box-shadow: 0 8px 18px rgba(250, 204, 21, 0.35);
+        transition: 0.25s ease;
+    }
+
+    .fetch-btn:hover {
+        background: #eab308;
+        transform: translateY(-2px);
+    }
+
+    .leads-table-card {
+        max-width: 1150px;
+        margin: 35px auto 0;
+        background: white;
+        border-radius: 18px;
+        padding: 25px;
+        box-shadow: 0 15px 35px rgba(15, 23, 42, 0.10);
+        border: 1px solid #e5e7eb;
+    }
+
+    .table th {
+        background: #111827;
+        color: white;
+        font-size: 14px;
+    }
+
+    .table td {
+        vertical-align: middle;
+        font-size: 14px;
+    }
+
+    .assign-bar {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 18px;
+        flex-wrap: wrap;
+    }
+
+    .employee-select {
+        max-width: 300px;
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid #d1d5db;
+    }
+
+    .assign-btn {
+        background: #111827;
+        color: white;
+        border: none;
+        padding: 11px 22px;
+        border-radius: 12px;
+        font-weight: 700;
+    }
+
+    .assign-btn:hover {
+        background: #374151;
+    }
+</style>
+
+<div class="lead-distribution-wrapper">
+
+    <div class="lead-distribution-card">
+
+        <div class="lead-icon">
+            <i class="fas fa-table"></i>
+        </div>
+
+        <h1>Lead Distribution</h1>
+
+        <p>
+            Fetch leads from Google Sheets, select leads, and assign them to employees.
+            Assigned leads will be saved in the normal Leads table.
+        </p>
+
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="fetch_leads">
+
+            <button type="submit" class="fetch-btn">
+                <i class="fas fa-download me-2"></i>
+                Fetch Leads from Google Sheets
+            </button>
+        </form>
+
+    </div>
+
+    {% if leads_data %}
+    <div class="leads-table-card">
+
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="assign_leads">
+
+            <div class="assign-bar">
+                <h3 class="fw-bold mb-0">Fetched Leads</h3>
+
+                <div>
+                    <select name="employee_id" class="employee-select" required>
+                        <option value="">Select Employee</option>
+
+                        {% for employee in employees %}
+                            <option value="{{ employee.id }}">
+                                {{ employee.user.username }}
+                            </option>
+                        {% endfor %}
+                    </select>
+
+                    <button type="submit" class="assign-btn">
+                        Assign Selected Leads
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Select</th>
+                            <th>#</th>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Source</th>
+                            <th>Email</th>
+                            <th>Created At</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for lead in leads_data %}
+                        <tr>
+                            <td>
+                                <input type="checkbox" name="selected_leads" value="{{ forloop.counter0 }}">
+                            </td>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ lead.name|default:"-" }}</td>
+                            <td>{{ lead.phone|default:"-" }}</td>
+                            <td>{{ lead.source|default:"-" }}</td>
+                            <td>{{ lead.email|default:"-" }}</td>
+                            <td>{{ lead.created_at|default:"-" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        </form>
+
+    </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

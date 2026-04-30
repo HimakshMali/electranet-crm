@@ -1,0 +1,1006 @@
+from django.shortcuts import get_object_or_404, render
+
+# Create your views here.
+
+from django.http import HttpResponseForbidden
+from django.shortcuts import render,redirect
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import Group
+# Create your views here.
+from .forms import  RegisterForm, EmployeeCreateForm, LeadForm,EmployeeUpdateForm, InvoiceForm, acticitefeedform
+from .models import ConvertedLeadItem, Project, Membership, Leads , Employee,Converted_leads, Products, FollowUp, LeadActivity, Display_leads, Client, Payment,activity_feed, SalaryRecord
+import random
+import string
+from django.db.models import Sum
+
+
+from django.contrib import messages
+from django.utils import timezone
+from django.utils.timezone import now
+
+
+from crm.functions.invoicegenerator import generate_invoice_pdf
+from .functions.invoice_service import create_full_invoice
+from .functions.invoicegenerator import generate_invoice_pdf
+from .functions.payment_service import record_payment, get_customer_ledger
+from .models import Customer, Products
+from django.http import HttpResponse
+
+
+from decimal import Decimal
+
+
+@login_required(login_url='/login')
+def home(request):
+    is_admin = request.user.groups.filter(name="Admin").exists()
+    leads = Leads.objects.filter(is_hidden = False)
+    feeds = activity_feed.objects.all()
+    display_leads = Display_leads.objects.all() # select eery row from crm_Display_lead 
+    products = Products.objects.all()  # ✅ A
+
+    today = now().date()
+
+    todays_followups = FollowUp.objects.filter(
+        followup_datetime__date=today
+    ).select_related('lead')
+
+
+
+
+
+    
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        # 🔥 ADD LEAD
+        if action == "add_lead":
+            form = LeadForm(request.POST)
+            
+            if form.is_valid():
+                lead = form.save(commit=False)
+                lead.added_by = request.user
+                lead.save()
+
+                display_lead = Display_leads(
+                    added_by = request.user,
+                    name = lead.name,
+                    email = lead.email,
+                    phone = lead.phone,
+                    source = lead.source,
+                    status = lead.status,
+                    created_at = lead.created_at
+
+                )
+
+                display_lead.save()
+                
+               
+            return redirect('home')
+        
+        elif action == "add_feed":
+            title = request.POST.get("title")
+            description = request.POST.get("description")
+
+            if title and description:
+                activity_feed.objects.create(
+                    author=request.user,
+                    title=title,
+                    description=description
+                )
+
+            return redirect("home")
+
+        # 🔥 DELETE LEAD
+        elif action == "delete_lead":
+            lead_id = request.POST.get("lead_id")
+            lead = get_object_or_404(Leads, id=lead_id)
+            
+
+            if lead.added_by == request.user:
+                lead.delete()
+
+            return redirect('home')
+        
+        # hide lead
+        elif action == "hide_lead":
+            lead_id = request.POST.get("lead_id")
+            lead = get_object_or_404(Leads, id=lead_id)
+
+            if lead.added_by == request.user:
+                lead.is_hidden = True
+                lead.save()
+
+            return redirect('home')
+
+        # 🔥 EDIT LEAD
+        elif action == "edit_lead":
+            lead_id = request.POST.get("lead_id")
+            lead = get_object_or_404(Leads, id=lead_id)
+            # display_lead = get_object_or_404(Display_leads, id = display_lead_id)
+
+            if lead.added_by == request.user:
+                lead.name = request.POST.get("name")
+                lead.email = request.POST.get("email")
+                lead.phone = request.POST.get("phone")
+                lead.source = request.POST.get("source")
+                lead.status = request.POST.get("status")
+                lead.save()
+
+            return redirect('home')
+
+        # 🔥 CONVERT LEAD → CUSTOMER
+        # elif action == "convert_lead":
+        #     lead_id = request.POST.get("lead_id")
+        #     revenue = request.POST.get("revenue")
+        #     product = request.POST.get("product")
+
+        #     lead = get_object_or_404(Leads, id=lead_id)
+
+        #     # prevent duplicate conversion
+        #     if not Converted_leads.objects.filter(lead=lead).exists():
+        #         Converted_leads.objects.create(
+        #             lead=lead,
+        #             closed_by=request.user,
+        #             revenue_from_customer=revenue,
+        #             product_bought=product
+        #         )
+
+        #     return redirect('converted_leads')  # ✅ correct redirect
+
+
+        # elif action == "convert_lead":
+        #     lead_id = request.POST.get("lead_id")
+        #     revenue = request.POST.get("revenue")
+        #     product = request.POST.get("product")
+
+        #     lead = get_object_or_404(Leads, id=lead_id)
+
+        #     if not Converted_leads.objects.filter(lead=lead).exists():
+        #         converted = Converted_leads.objects.create(
+        #             lead=lead,
+        #             closed_by=request.user,
+        #             revenue_from_customer=revenue,
+        #             product_bought=product
+        #         )
+
+        #         # 🔥 Create Client automatically
+        #         Client.objects.create(
+        #             converted_lead=converted,
+        #             closed_by=request.user,
+        #             billed_amount=revenue  # you can change logic later
+        #         )
+
+        #     return redirect('converted-leads')
+
+
+
+        elif action == "convert_lead":
+            lead_id = request.POST.get("lead_id")
+            lead = get_object_or_404(Leads, id=lead_id)
+
+            product_ids = request.POST.getlist("product_ids[]")
+            quantities = request.POST.getlist("quantities[]")
+
+            total_revenue = 0
+            product_summary = []
+
+            converted, created = Converted_leads.objects.get_or_create(
+                lead=lead,
+                defaults={
+                    "closed_by": request.user,
+                    "revenue_from_customer": 0,
+                    "product_bought": "",
+                }
+            )
+
+            if not created:
+                converted.items.all().delete()
+
+            for product_id, qty in zip(product_ids, quantities):
+                if not product_id or not qty:
+                    continue
+
+                product = get_object_or_404(Products, id=product_id)
+                quantity = int(qty)
+
+                line_total = product.unit_price_incl_gst * quantity
+                total_revenue += line_total
+
+                ConvertedLeadItem.objects.create(
+                    converted_lead=converted,
+                    product=product,
+                    quantity=quantity,
+                    unit_price_incl_gst=product.unit_price_incl_gst,
+                    gst_rate=product.gst_rate,
+                    hsn_code=product.hsn_code,
+                    line_total=line_total
+                )
+
+                product_summary.append(f"{product.name} x {quantity}")
+
+            converted.revenue_from_customer = total_revenue
+            converted.product_bought = ", ".join(product_summary)
+            converted.closed_by = request.user
+            converted.save()
+
+            Client.objects.get_or_create(
+                converted_lead=converted,
+                defaults={
+                    "closed_by": request.user,
+                    "billed_amount": total_revenue,
+                }
+            )
+
+            lead.status = "Finalised"
+            lead.save()
+
+            return redirect("converted_leads")
+
+    lead_form = LeadForm()
+
+    return render(request, 'crm/home.html', {
+        'is_admin': is_admin,
+        'leads': leads,
+        'display_leads' : display_leads, # display_leads = DIsplay_leads.obleects.all waleee
+        'lead_form': lead_form,
+        'products': products, 
+        'username': request.user.username,
+        "todays_followups": todays_followups,
+        'feeds': feeds,
+    })
+
+@login_required(login_url='/login')
+def converted_leads(request):
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        if action == "add_payment":
+            client_id = request.POST.get("client_id")
+            amount = request.POST.get("amount")
+            note = request.POST.get("note")
+
+            client = get_object_or_404(Client, id=client_id)
+
+            Payment.objects.create(
+                client=client,
+                amount=amount,
+                note=note
+            )
+
+            messages.success(request, "Payment added successfully.")
+            return redirect("converted_leads")
+
+        elif action == "delete_converted_lead":
+            converted_lead_id = request.POST.get("converted_lead_id")
+
+            converted_lead = get_object_or_404(Converted_leads, id=converted_lead_id)
+            converted_lead.delete()
+
+            messages.success(request, "Converted lead deleted successfully.")
+            return redirect("converted_leads")
+
+    leads = Converted_leads.objects.select_related(
+        "lead",
+        "closed_by"
+    ).order_by("-closed_at")
+
+    return render(request, "crm/converted_leads.html", {
+        "leads": leads
+    })
+@login_required(login_url='/login')
+def ledger_dashboard(request):
+    clients = Client.objects.select_related(
+        "converted_lead",
+        "converted_lead__lead",
+        "closed_by"
+    ).prefetch_related("payments").all()
+
+    total_billed = 0
+    total_paid = 0
+    total_remaining = 0
+
+    for client in clients:
+        client.paid_amount = client.total_paid()
+        client.remaining = client.remaining_amount()
+
+        total_billed += client.billed_amount
+        total_paid += client.paid_amount
+        total_remaining += client.remaining
+
+    return render(request, "crm/ledger_dashboard.html", {
+        "clients": clients,
+        "total_billed": total_billed,
+        "total_paid": total_paid,
+        "total_remaining": total_remaining,
+    })
+
+#     leads = Converted_leads.objects.select_related(
+#     "lead", "closed_by"
+# ).prefetch_related(
+#     "client__payments"
+# ).all().order_by("-closed_at")
+
+def clients(request):
+    clients = Client.objects.all()
+    return render(request, "crm/clients.html", {"clients": clients})
+
+
+def client_detail(request, client_id):
+    client = get_object_or_404(Client, id=client_id)
+
+    if request.method == "POST":
+        amount = request.POST.get("amount")
+        date = request.POST.get("date")
+
+        Payment.objects.create(
+            client=client,
+            amount=amount,
+            paid_on=date
+        )
+
+        return redirect('client_detail', client_id=client.id)
+
+    payments = client.payments.all().order_by('-paid_on')
+
+    return render(request, "client_detail.html", {
+        "client": client,
+        "payments": payments
+    })
+
+def generate_code():
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+
+
+def sign_up(request):
+    if request.method == "POST":
+        form = RegisterForm(request.POST)
+
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+
+            role = form.cleaned_data.get('role')
+            project_name = form.cleaned_data.get('project_name')
+            invitation_code = form.cleaned_data.get('invitation_code')
+
+            # 🔹 Assign group (your old logic)
+            if role == "admin":
+                group = Group.objects.get(name="Admin")
+            else:
+                group = Group.objects.get(name="Employee")
+
+            user.groups.add(group)
+
+            # 🔥 PROJECT LOGIC
+            if role == "admin":
+                # Admin creates project
+                code = generate_code()
+
+                project = Project.objects.create(
+                    name=project_name,
+                    invitation_code=code,
+                    created_by=user
+                )
+
+                Membership.objects.create(
+                    user=user,
+                    project=project,
+                    role='admin'
+                )
+
+            else:
+                # Employee joins using invitation code
+                try:
+                    project = Project.objects.get(invitation_code=invitation_code)
+
+                    Membership.objects.create(
+                        user=user,
+                        project=project,
+                        role='employee'
+                    )
+
+                except Project.DoesNotExist:
+                    return render(request, 'registration/sign-up.html', {
+                        'form': form,
+                        'error': 'Invalid invitation code'
+                    })
+
+            return redirect('/home')
+
+    else:
+        form = RegisterForm()
+
+    return render(request, 'registration/sign-up.html', {'form': form})
+
+@login_required(login_url='/login')
+def add_employee(request):
+
+    if not request.user.groups.filter(name="Admin").exists():
+        return HttpResponseForbidden("Not allowed")
+
+    if request.method == "POST":
+        form = EmployeeCreateForm(request.POST)
+
+        if form.is_valid():
+            user = form.save()
+
+            # Assign Employee group
+            group = Group.objects.get(name="Employee")
+            user.groups.add(group)
+
+            # 🔥 Create Employee profile
+            Employee.objects.create(
+                user=user,
+                salary=form.cleaned_data['salary'],
+                joined_since=form.cleaned_data['joined_since'],
+                role=form.cleaned_data['role'],
+                address=form.cleaned_data['address'],
+                contact_number=form.cleaned_data['contact_number'],
+            )
+
+            return redirect('/home')
+
+    else:
+        form = EmployeeCreateForm()
+
+    return render(request, 'crm/add_employee.html', {'form': form})
+
+@login_required
+def create_lead(request):
+    if request.method == "POST":
+        form = LeadForm(request.POST)
+        if form.is_valid():
+            lead = form.save(commit=False) # it creates a new lead object from the form data but does not save it to the database yet
+            lead.added_by = request.user # it assigns the currently logged-in user as the one who added the lead
+            lead.save() # it saves the lead to the database
+            return redirect('/home')
+
+    else:
+        form = LeadForm()
+
+    return render(request,'crm/create_lead.html',{'form':form})
+
+
+
+# retriving all the leads
+
+def all_leads(request):
+    leads = Leads.objects.all()
+    return render(request, 'crm/all_leads.html', {
+        'leads': leads
+    })
+
+# EMPLOYEES
+
+
+# 🔹 Employee List
+@login_required(login_url='/login')
+@login_required(login_url='/login')
+def employees_list(request):
+
+    if not request.user.groups.filter(name="Admin").exists():
+        return HttpResponseForbidden("Not allowed")
+
+    employees = Employee.objects.select_related('user').all()
+
+    # 🔥 Attach deals + total revenue to each employee
+    for emp in employees:
+        deals = Converted_leads.objects.filter(closed_by=emp.user)
+
+        emp.deals = deals
+        emp.total_revenue = deals.aggregate(
+            total=Sum('revenue_from_customer')
+        )['total'] or 0
+
+    return render(request, 'crm/employees_list.html', {
+        'employees': employees
+    })
+
+# 🔹 Edit Employee
+@login_required(login_url='/login')
+def edit_employee(request, id):
+
+    if not request.user.groups.filter(name="Admin").exists():
+        return HttpResponseForbidden("Not allowed")
+
+    employee = get_object_or_404(Employee, id=id)
+    user = employee.user
+
+    if request.method == "POST":
+        form = EmployeeUpdateForm(request.POST, instance=employee, user=user)
+
+        if form.is_valid():
+            form.save()
+
+            # update user fields
+            user.first_name = form.cleaned_data['first_name']
+            user.last_name = form.cleaned_data['last_name']
+            user.email = form.cleaned_data['email']
+            user.save()
+
+            return redirect('/employees')
+
+    else:
+        form = EmployeeUpdateForm(instance=employee, user=user)
+
+    return render(request, 'crm/edit_employee.html', {
+        'form': form
+    })
+
+
+# 🔹 Placeholder Dashboard
+@login_required(login_url='/login')
+def employee_dashboard(request, id):
+    employee = get_object_or_404(Employee, id=id)
+
+    return render(request, 'crm/employee_dashboard.html', {
+        'employee': employee
+    })
+
+
+
+
+@login_required(login_url='/login')
+# def converted_leads_list(request):
+
+#     # Optional: restrict to admin
+#     if not request.user.groups.filter(name="Admin").exists():
+#         return HttpResponseForbidden("Not allowed")
+    
+
+#     leads = Converted_leads.objects.select_related('lead', 'closed_by').order_by('-closed_at')
+   
+
+#     return render(request, 'crm/converted_leads.html', {
+#         'leads': leads,
+#         # 'total_reveneue' : total_reveneue
+#     })
+@login_required(login_url='/login')
+def add_followup(request):
+    if request.method == "POST":
+        lead_id = request.POST.get("lead_id")
+        datetime_value = request.POST.get("followup_datetime")
+        note = request.POST.get("note")
+
+        lead = get_object_or_404(Leads, id=lead_id)
+
+        followup = FollowUp.objects.create(
+            lead = lead,
+            followup_datetime = datetime_value,
+            note=note,
+            created_by=request.user
+        )
+
+        LeadActivity.objects.create(
+            lead=lead,
+            activity_type='followup',
+            note=note,
+            activity_time=datetime_value,
+            created_by=request.user
+        )
+
+
+        # ✅ Restriction: only Contacted leads
+        if lead.status != "Contacted":
+            messages.error(request, "Follow-up allowed only for Contacted leads.")
+            return redirect("home")
+
+        FollowUp.objects.create(
+            lead=lead,
+            followup_datetime=datetime_value,
+            note=note,
+            created_by=request.user
+        )
+
+        messages.success(request, "Follow-up added successfully!")
+        return redirect("home")
+def edit_followup(request):
+    if request.method == "POST":
+        followup_id = request.POST.get("followup_id")
+        datetime_value = request.POST.get("followup_datetime")
+        note = request.POST.get("note")
+
+        followup = get_object_or_404(FollowUp, id=followup_id)
+
+        # Optional: restrict to creator
+        if request.user != followup.created_by:
+            messages.error(request, "Not allowed")
+            return redirect("home")
+
+        followup.followup_datetime = datetime_value
+        followup.note = note
+        followup.save()
+
+        messages.success(request, "Follow-up updated")
+        return redirect("home")
+    
+
+def delete_followup(request):
+    if request.method == "POST":
+        followup_id = request.POST.get("followup_id")
+
+        followup = get_object_or_404(FollowUp, id=followup_id)
+
+        if request.user != followup.created_by:
+            messages.error(request, "Not allowed")
+            return redirect("home")
+
+        followup.delete()
+        messages.success(request, "Follow-up deleted")
+        return redirect("home")
+    
+
+
+def lead_detail(request, lead_id):
+    lead = get_object_or_404(Leads, id = lead_id)
+
+    activities = lead.activities.all().order_by('activity_time')
+
+    return render(request, 'crm/lead_detail.html', {
+
+        'lead' : lead, 
+        'activities' : activities
+    })
+
+
+@login_required(login_url='/login')
+def products_page(request):
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        if action == "add":
+            Products.objects.create(
+                name=request.POST.get("name"),
+                hsn_code=request.POST.get("hsn_code"),
+                unit_price_incl_gst=Decimal(request.POST.get("unit_price_incl_gst") or 0),
+                gst_rate=Decimal(request.POST.get("gst_rate") or 18),
+                inventory=int(request.POST.get("inventory") or 0),
+                supplier=request.POST.get("supplier")
+            )
+            return redirect('products')
+
+        elif action == "delete":
+            product = get_object_or_404(Products, id=request.POST.get("id"))
+            product.delete()
+            return redirect('products')
+
+        elif action == "edit":
+            product = get_object_or_404(Products, id=request.POST.get("id"))
+
+            product.name = request.POST.get("name")
+            product.hsn_code = request.POST.get("hsn_code")
+            product.unit_price_incl_gst = Decimal(request.POST.get("unit_price_incl_gst") or 0)
+            product.gst_rate = Decimal(request.POST.get("gst_rate") or 18)
+            product.inventory = int(request.POST.get("inventory") or 0)
+            product.supplier = request.POST.get("supplier")
+            product.save()
+
+            return redirect('products')
+
+    products = Products.objects.all().order_by('-id')
+
+    return render(request, 'crm/products.html', {
+        'products': products
+    })  
+
+
+
+
+
+# incoice
+
+@login_required(login_url='/login')
+def create_invoice(request):
+    if request.method == "POST":
+        form = InvoiceForm(request.POST)
+        
+        if form.is_valid():
+            # 1. Prepare data for the Database Service
+            # We use the cleaned_data from your form
+            invoice_metadata = {
+                "number": form.cleaned_data['invoice_number'],
+                "date": form.cleaned_data['invoice_date'],
+                "discount": form.cleaned_data['discount'] or 0,
+                "vehicle": form.cleaned_data['vehicle'],
+            }
+
+            # 2. Get the Dynamic Product Data (Not in the form)
+            product_names = request.POST.getlist('product_name[]')
+            hsn_codes = request.POST.getlist('hsn_code[]')
+            unit_prices = request.POST.getlist('unit_price_incl_gst[]')
+            gst_rates = request.POST.getlist('gst_rate[]')
+            quantities = request.POST.getlist('quantity[]')
+            product_ids = request.POST.getlist('product_id[]')
+
+            items_data = []
+            for i in range(len(product_names)):
+                if not unit_prices[i] or not quantities[i]:
+                    continue
+                items_data.append({
+                    'product_id': product_ids[i] if (i < len(product_ids) and product_ids[i]) else None,
+                    'name': product_names[i],
+                    'hsn_code': hsn_codes[i],
+                    'unit_price': unit_prices[i],
+                    'gst_rate': gst_rates[i],
+                    'quantity': quantities[i],
+                })
+
+            # 3. SAVE TO DATABASE
+            # Note: Since your form has manual name/address, we either find or create a Customer
+            customer_obj, created = Customer.objects.get_or_create(
+                phone=form.cleaned_data['customer_phone'],
+                defaults={
+                    'name': form.cleaned_data['customer_name'],
+                    'address': form.cleaned_data['customer_address'],
+                    'email': form.cleaned_data['customer_email'],
+                    'gstin': form.cleaned_data['customer_gstin'],
+                }
+            )
+
+            # Call your service to handle the complex DB logic
+            invoice = create_full_invoice(request.user, customer_obj.id, invoice_metadata, items_data)
+
+            # 4. GENERATE PDF (using the saved invoice object)
+            pdf_data = {
+                "customer": {
+                    "name": invoice.customer.name,
+                    "address": invoice.customer.address,
+                    "phone": invoice.customer.phone,
+                    "email": invoice.customer.email,
+                    "gstin": invoice.customer.gstin,
+                },
+                "invoice": {
+                    "number": invoice.invoice_number,
+                    "date": str(invoice.invoice_date),
+                    "discount": float(invoice.discount),
+                    "vehicle": invoice.vehicle,
+                },
+                "products": [
+                    {
+                        "name": item.product_name,
+                        "hsn": item.hsn_code,
+                        "price": float(item.unit_price),
+                        "gst": float(item.gst_rate),
+                        "qty": float(item.quantity)
+                    } for item in invoice.items.all()
+                ]
+            }
+
+            pdf_buffer = generate_invoice_pdf(pdf_data)
+            response = HttpResponse(pdf_buffer, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="invoice_{invoice.invoice_number}.pdf"'
+            return response
+    else:
+        form = InvoiceForm()
+
+    # GET Request
+    return render(request, "crm/Invoice.html", {
+        "form": form,
+        "products": Products.objects.all(),
+        "customers": Customer.objects.all()
+    })
+# @login_required(login_url='/login')
+# def create_invoice_view(request):
+#     if request.method == "POST":
+#         # 1. Parse Request Data
+#         customer_id = request.POST.get('customer_id')
+        
+#         invoice_data = {
+#             "number": request.POST.get('invoice_number'),
+#             "date": request.POST.get('invoice_date'),
+#             "discount": request.POST.get('discount', 0),
+#             "vehicle": request.POST.get('vehicle', ''),
+#         }
+
+#         # Parse parallel arrays from the form
+#         product_ids = request.POST.getlist('product_id[]')
+#         names = request.POST.getlist('product_name[]')
+#         hsn_codes = request.POST.getlist('hsn_code[]')
+#         prices = request.POST.getlist('unit_price_incl_gst[]')
+#         gsts = request.POST.getlist('gst_rate[]')
+#         qtys = request.POST.getlist('quantity[]')
+
+#         items_data = []
+#         for i in range(len(names)):
+#             if not prices[i] or not qtys[i]:
+#                 continue
+#             items_data.append({
+#                 'product_id': product_ids[i] if product_ids[i] else None,
+#                 'name': names[i],
+#                 'hsn_code': hsn_codes[i],
+#                 'unit_price': prices[i],
+#                 'gst_rate': gsts[i],
+#                 'quantity': qtys[i],
+#             })
+
+#         # 2. Execute Business Logic via Service
+#         invoice = create_full_invoice(request.user, customer_id, invoice_data, items_data)
+
+#         # 3. Format data to pass to your existing ReportLab function
+#         # We query the DB here to ensure the PDF perfectly reflects what was saved
+#         customer = invoice.customer
+#         pdf_data = {
+#             "customer": {
+#                 "name": customer.name,
+#                 "address": customer.address,
+#                 "phone": customer.phone,
+#                 "email": customer.email,
+#                 "gstin": customer.gstin,
+#                 "delivery": customer.delivery_address,
+#             },
+#             "invoice": {
+#                 "number": invoice.invoice_number,
+#                 "date": str(invoice.invoice_date),
+#                 "discount": invoice.discount,
+#                 "vehicle": invoice.vehicle,
+#             },
+#             "products": [
+#                 {
+#                     "name": item.product_name,
+#                     "hsn": item.hsn_code,
+#                     "price": float(item.unit_price),
+#                     "gst": float(item.gst_rate),
+#                     "qty": float(item.quantity)
+#                 } for item in invoice.items.all()
+#             ]
+#         }
+
+#         # 4. Generate & Return PDF
+#         pdf_buffer = generate_invoice_pdf(pdf_data)
+#         response = HttpResponse(pdf_buffer, content_type='application/pdf')
+#         response['Content-Disposition'] = f'attachment; filename="invoice_{invoice.invoice_number}.pdf"'
+#         return response
+
+#     # GET Request: Pass dropdown data to template
+#     customers = Customer.objects.all()
+#     products = Products.objects.all()
+#     return render(request, "crm/Invoice.html", {
+#         "customers": customers,
+#         "products": products
+#     })
+
+
+
+@login_required(login_url='/login')
+def customer_ledger_view(request, customer_id):
+    """
+    Displays the detailed financial statement for a specific customer.
+    """
+    # 1. Fetch data from service layer
+    ledger_data = get_customer_ledger(customer_id)
+    
+    # ledger_data contains: customer, invoices, total_billed, total_paid, total_due
+    return render(request, 'crm/ledger.html', ledger_data)
+
+@login_required(login_url='/login')
+def ledger_list_view(request):
+    """
+    Overview page showing all customers and their current outstanding balances.
+    """
+    customers = Customer.objects.all()
+    
+    # Add temporary calculation for the list view
+    for customer in customers:
+        invoices = customer.invoices.all()
+        billed = sum(inv.total_amount for inv in invoices)
+        paid = sum(inv.total_paid for inv in invoices)
+        customer.total_due = billed - paid
+
+    return render(request, 'crm/ledger.html', {'customers': customers})
+
+
+
+def elementshtml(request):
+     return render(request, 'crm/elements.html')
+
+@login_required(login_url='/login')
+def add_activity_feed_post(request):
+    if request.method == 'POST':
+        form = acticitefeedform(request.POST)
+
+        if form.is_valid():
+            feed = form.save(commit=False)
+            feed.author = request.user
+            feed.save()
+            return redirect('home')
+    else:
+        form = acticitefeedform()
+
+    return render(request, 'crm/create_post.html', {'form': form})
+
+
+
+
+@login_required(login_url='/login')
+def employee_salary(request, employee_id):
+    employee = get_object_or_404(Employee, id = employee_id)
+
+    if request.method == 'POST':
+        month = request.POST.get("month")
+        year = request.POST.get("year")
+        base_salary = request.POST.get("base_salary")
+        total_bonus = request.POST.get("total_bonus") or 0
+        total_deductions = request.POST.get("total_deductions") or 0
+        status = request.POST.get("status")
+        notes = request.POST.get("notes")
+
+        SalaryRecord.objects.create(
+            employee = employee,
+            month=month,
+            year=int(year),
+            base_salary=Decimal(base_salary),
+            total_bonus=Decimal(total_bonus),
+            total_deductions=Decimal(total_deductions),
+            status=status,
+            notes=notes,
+
+        )
+
+        return redirect('employee_salary', employee_id = employee.id)
+    
+
+    salary_records = SalaryRecord.objects.filter(employee=employee).order_by('-year', '-created_at')
+
+    return render(request, 'crm/salary.html', {
+        'employee': employee,
+        'salary_records': salary_records,
+    })
+
+
+
+@login_required(login_url='/login')
+def customer_invoice(request, converted_lead_id):
+    converted_lead = get_object_or_404(Converted_leads, id=converted_lead_id)
+
+    # 🔥 Get all products for this converted lead
+    invoice_items = converted_lead.items.select_related("product")
+
+    if request.method == "POST":
+        # 🔥 Collect all form data
+        data = {
+            "customer_name": request.POST.get("customer_name"),
+            "customer_email": request.POST.get("customer_email"),
+            "customer_phone": request.POST.get("customer_phone"),
+            "customer_address": request.POST.get("customer_address"),
+            "customer_gstin": request.POST.get("customer_gstin"),
+            "delivery_address": request.POST.get("delivery_address"),
+            "invoice_number": request.POST.get("invoice_number"),
+            "invoice_date": request.POST.get("invoice_date"),
+            "vehicle": request.POST.get("vehicle"),
+            "discount": request.POST.get("discount"),
+            "final_amount": request.POST.get("final_amount"),
+        }
+
+        # 🔥 Collect product rows (already auto-filled)
+        product_names = request.POST.getlist("product_name[]")
+        hsn_codes = request.POST.getlist("hsn_code[]")
+        gst_rates = request.POST.getlist("gst_rate[]")
+        prices = request.POST.getlist("unit_price_incl_gst[]")
+        quantities = request.POST.getlist("quantity[]")
+
+        products = []
+
+        for i in range(len(product_names)):
+            products.append({
+                "name": product_names[i],
+                "hsn": hsn_codes[i],
+                "gst": gst_rates[i],
+                "price": prices[i],
+                "qty": quantities[i],
+                "total": float(prices[i]) * int(quantities[i])
+            })
+
+        # 🔥 CALL YOUR PDF FUNCTION HERE
+        # (you said you already have it)
+        from crm.functions.invoicegenerator import generate_invoice_pdf
+
+        return generate_invoice_pdf(data, products)
+
+    return render(request, "crm/customer-invoice.html", {
+        "converted_lead": converted_lead,
+        "invoice_items": invoice_items,
+    })

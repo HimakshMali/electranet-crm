@@ -1,0 +1,318 @@
+{% extends "crm/base.html" %}
+
+{% block title %}Ledger Dashboard{% endblock %}
+
+{% block content %}
+<style>
+    /* --- CSS Variables for Corporate Light Theme --- */
+    :root {
+        --bg-body: #f8fafc;
+        --bg-surface: #ffffff;
+        --border-soft: #e5e7eb;
+        --text-dark: #111827;
+        --text-muted: #6b7280;
+        --primary-color: #2563eb;
+        --success-color: #10b981;
+        --danger-color: #ef4444;
+        --warning-color: #f59e0b;
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        --radius-lg: 12px;
+        --radius-md: 8px;
+    }
+
+    .dashboard-main {
+        font-family: 'Inter', -apple-system, sans-serif;
+        background-color: var(--bg-body);
+        min-height: 100vh;
+        padding-bottom: 2rem;
+        color: var(--text-dark);
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border-soft);
+    }
+
+    /* --- Financial Summary Cards --- */
+    .stat-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        padding: 24px;
+        box-shadow: var(--shadow-sm);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    /* Accent lines on cards */
+    .stat-card.revenue::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--primary-color); }
+    .stat-card.paid::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--success-color); }
+    .stat-card.remaining::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--danger-color); }
+
+    .stat-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+
+    .revenue .stat-icon { background: #eff6ff; color: var(--primary-color); }
+    .paid .stat-icon { background: #ecfdf5; color: var(--success-color); }
+    .remaining .stat-icon { background: #fef2f2; color: var(--danger-color); }
+
+    .stat-details h6 {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 4px;
+    }
+
+    .stat-details h3 {
+        color: var(--text-dark);
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin: 0;
+        letter-spacing: -0.02em;
+    }
+
+    /* --- Ledger Table Card --- */
+    .table-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
+        overflow: hidden;
+    }
+
+    .table-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--border-soft);
+        background: var(--bg-surface);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .table-header h5 {
+        margin: 0;
+        font-weight: 600;
+        color: var(--text-dark);
+    }
+
+    /* --- Modern Table Styling --- */
+    .custom-table {
+        margin-bottom: 0;
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .custom-table thead th {
+        background-color: #f8fafc;
+        color: var(--text-muted);
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 16px 24px;
+        border-bottom: 1px solid var(--border-soft);
+        border-top: none;
+    }
+
+    .custom-table tbody td {
+        padding: 16px 24px;
+        vertical-align: middle;
+        border-bottom: 1px solid #f3f4f6;
+        color: var(--text-dark);
+        font-size: 0.95rem;
+    }
+
+    .custom-table tbody tr:hover {
+        background-color: #f8fafc;
+    }
+
+    .custom-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    /* --- Soft Badges --- */
+    .badge-soft-success {
+        background-color: #d1fae5;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+    }
+    
+    .badge-soft-danger {
+        background-color: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+
+    .badge-soft-warning {
+        background-color: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fde68a;
+    }
+
+    .amount-cell {
+        font-family: 'Inter', monospace; /* Keep numbers aligned */
+        font-weight: 500;
+    }
+</style>
+
+<div class="dashboard-main pt-4 pb-5">
+    <div class="container-fluid">
+
+        <div class="page-header">
+            <div>
+                <h2 class="fw-bold text-dark m-0">Financial Ledger</h2>
+                <p class="text-muted mt-1 mb-0">Overview of client billings and payments</p>
+            </div>
+            <div>
+                <button class="btn btn-outline-secondary bg-white shadow-sm border-soft rounded-3 px-3 py-2">
+                    <i class="fas fa-download me-2"></i>Export Report
+                </button>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            
+            <div class="col-md-4">
+                <div class="stat-card revenue">
+                    <div class="stat-icon">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                    </div>
+                    <div class="stat-details">
+                        <h6>Total Billed</h6>
+                        <h3>₹{{ total_billed }}</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="stat-card paid">
+                    <div class="stat-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-details">
+                        <h6>Total Received</h6>
+                        <h3>₹{{ total_paid }}</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="stat-card remaining">
+                    <div class="stat-icon">
+                        <i class="fas fa-exclamation-circle"></i>
+                    </div>
+                    <div class="stat-details">
+                        <h6>Outstanding</h6>
+                        <h3>₹{{ total_remaining }}</h3>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="table-card">
+            <div class="table-header">
+                <i class="fas fa-list-alt text-primary fs-5"></i>
+                <h5>Ledger Entries</h5>
+            </div>
+
+            <div class="table-responsive">
+                <table class="custom-table table-borderless">
+                    <thead>
+                        <tr>
+                            <th>Customer</th>
+                            <th>Contact</th>
+                            <th>Product / Service</th>
+                            <th>Billed Amount</th>
+                            <th>Amount Paid</th>
+                            <th>Remaining</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for client in clients %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="bg-light text-primary fw-bold rounded-circle d-flex justify-content-center align-items-center" style="width: 40px; height: 40px;">
+                                        {{ client.converted_lead.lead.name|first|upper }}
+                                    </div>
+                                    <strong class="text-dark">{{ client.converted_lead.lead.name }}</strong>
+                                </div>
+                            </td>
+
+                            <td>
+                                <span class="text-muted"><i class="fas fa-phone-alt me-1" style="font-size: 0.8rem;"></i> {{ client.converted_lead.lead.phone|default:"-" }}</span>
+                            </td>
+
+                            <td>
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary border px-2 py-1 rounded">
+                                    {{ client.converted_lead.product_bought }}
+                                </span>
+                            </td>
+
+                            <td class="amount-cell text-dark">
+                                ₹{{ client.billed_amount }}
+                            </td>
+
+                            <td class="amount-cell text-success fw-bold">
+                                ₹{{ client.paid_amount }}
+                            </td>
+
+                            <td class="amount-cell text-danger fw-bold">
+                                ₹{{ client.remaining }}
+                            </td>
+
+                            <td>
+                                {% if client.remaining == 0 %}
+                                    <span class="badge badge-soft-success px-3 py-2 rounded-pill fw-medium"><i class="fas fa-check me-1"></i> Paid</span>
+                                {% elif client.paid_amount == 0 %}
+                                    <span class="badge badge-soft-danger px-3 py-2 rounded-pill fw-medium"><i class="fas fa-times me-1"></i> Unpaid</span>
+                                {% else %}
+                                    <span class="badge badge-soft-warning px-3 py-2 rounded-pill fw-medium"><i class="fas fa-hourglass-half me-1"></i> Partial</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7">
+                                <div class="text-center py-5">
+                                    <i class="fas fa-folder-open fs-1 text-muted opacity-25 mb-3 d-block"></i>
+                                    <span class="text-muted fw-medium">No ledger entries found yet.</span>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}
