@@ -3,4 +3,4 @@ venv/
 db.sqlite3
 crm/functions/service_account.json
 __pycache__/
-*.pycunt.json
+*.pyc_account.json

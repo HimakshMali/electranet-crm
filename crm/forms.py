@@ -45,6 +45,13 @@ class EmployeeCreateForm(UserCreationForm):
     joined_since = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}))
     role = forms.ChoiceField(choices=Employee.ROLE_CHOICES)
 
+    fathers_name = forms.CharField(max_length=150, required=False)
+    aadhar_no = forms.CharField(max_length=15, required=False)
+    bank_name = forms.CharField(max_length=150, required=False)
+    account_no = forms.CharField(max_length=20, required=False)
+    ifsc_code = forms.CharField(max_length=15, required=False)
+    uan_no = forms.CharField(max_length=15, required=False)
+
     address = forms.CharField(widget=forms.Textarea)
     contact_number = forms.CharField(max_length=15)
 
@@ -65,7 +72,23 @@ class EmployeeUpdateForm(forms.ModelForm):
 
     class Meta:
         model = Employee
-        fields = ['base_salary', 'joined_since', 'role', 'address', 'contact_number']
+        fields = [
+            'base_salary',
+            'joined_since',
+            'role',
+            'fathers_name',
+            'aadhar_no',
+            'bank_name',
+            'account_no',
+            'ifsc_code',
+            'uan_no',
+            'address',
+            'contact_number',
+        ]
+        widgets = {
+            'joined_since': forms.DateInput(attrs={'type': 'date'}),
+            'address': forms.Textarea(attrs={'rows': 3}),
+        }
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
@@ -75,6 +98,22 @@ class EmployeeUpdateForm(forms.ModelForm):
             self.fields['first_name'].initial = user.first_name
             self.fields['last_name'].initial = user.last_name
             self.fields['email'].initial = user.email
+
+    def save(self, commit=True):
+        employee = super().save(commit=False)
+
+        user = employee.user
+        user.first_name = self.cleaned_data['first_name']
+        user.last_name = self.cleaned_data['last_name']
+        user.email = self.cleaned_data['email']
+
+        if commit:
+            user.save()
+            employee.save()
+
+        return employee
+        
+
 class LeadForm(forms.ModelForm):
     class Meta:
         model = Leads

@@ -58,4 +58,7 @@ urlpatterns = [
 
     path("dashboard/", views.crm_dashboard, name="dashboard"),
 
+
+    path('employees/<int:employee_id>/', views.employee_detail, name='employee_detail'),
+
 ]

@@ -457,6 +457,17 @@ def add_employee(request):
                 base_salary=form.cleaned_data['base_salary'],
                 joined_since=form.cleaned_data['joined_since'],
                 role=form.cleaned_data['role'],
+
+                fathers_name=form.cleaned_data.get('fathers_name'),
+                aadhar_no=form.cleaned_data.get('aadhar_no'),
+                bank_name=form.cleaned_data.get('bank_name'),
+                account_no=form.cleaned_data.get('account_no'),
+                ifsc_code=form.cleaned_data.get('ifsc_code'),
+                uan_no=form.cleaned_data.get('uan_no'),
+
+                
+
+
                 address=form.cleaned_data['address'],
                 contact_number=form.cleaned_data['contact_number'],
             )
@@ -465,12 +476,42 @@ def add_employee(request):
             return redirect('add_employee')
 
         else:
+            print(form.errors)
             messages.error(request, "Please fix the errors below.")
 
     else:
         form = EmployeeCreateForm()
 
     return render(request, 'crm/add_employee.html', {'form': form})
+
+
+@login_required(login_url='/login')
+def employee_detail(request, employee_id):
+
+    if not request.user.groups.filter(name="Admin").exists():
+        return HttpResponseForbidden("Not allowed")
+
+    employee = get_object_or_404(Employee, id=employee_id)
+
+    if request.method == "POST":
+        form = EmployeeUpdateForm(request.POST, instance=employee, user=employee.user)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Employee details updated successfully.")
+            return redirect('employee_detail', employee_id=employee.id)
+        else:
+            messages.error(request, "Please fix the errors below.")
+
+    else:
+        form = EmployeeUpdateForm(instance=employee, user=employee.user)
+
+    return render(request, 'crm/employee_details.html', {
+        'employee': employee,
+        'form': form,
+    })
+
+
 @login_required
 def create_lead(request):
     if request.method == "POST":
@@ -1317,3 +1358,4 @@ def crm_dashboard(request):
     }
 
     return render(request, "crm/dashboard.html", context)
+

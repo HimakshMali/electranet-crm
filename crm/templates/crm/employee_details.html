@@ -1,0 +1,263 @@
+
+{% extends "crm/base.html" %}
+
+{% block title %}Employees Directory{% endblock %}
+
+{% block content %}
+
+{% load crispy_forms_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Employee Details</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f3f4f6;
+            padding: 40px;
+        }
+
+        .card {
+            max-width: 950px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 14px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        }
+
+        h2 {
+            margin-bottom: 25px;
+            color: #111827;
+        }
+
+        .top-info {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+        }
+
+        label {
+            font-weight: 700;
+            color: #374151;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 11px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 15px;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            min-height: 90px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px 24px;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .btn-row {
+            margin-top: 25px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-save {
+            border: none;
+            background: #111827;
+            color: white;
+            padding: 12px 18px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn-back {
+            text-decoration: none;
+            background: #e5e7eb;
+            color: #111827;
+            padding: 12px 18px;
+            border-radius: 8px;
+            font-weight: 700;
+        }
+
+        .message {
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .errorlist {
+            color: #dc2626;
+            font-size: 13px;
+            margin-top: 6px;
+            padding-left: 18px;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 20px;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="card">
+
+    <h2>Edit Employee Details</h2>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="message {{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="top-info">
+        <strong>Username:</strong> {{ employee.user.username }}
+    </div>
+
+    {% if form.errors %}
+        <div class="message error">
+            Please fix the errors below.
+        </div>
+    {% endif %}
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <div class="form-grid">
+
+            <div>
+                {{ form.first_name.label_tag }}
+                {{ form.first_name }}
+                {{ form.first_name.errors }}
+            </div>
+
+            <div>
+                {{ form.last_name.label_tag }}
+                {{ form.last_name }}
+                {{ form.last_name.errors }}
+            </div>
+
+            <div>
+                {{ form.email.label_tag }}
+                {{ form.email }}
+                {{ form.email.errors }}
+            </div>
+
+            <div>
+                {{ form.contact_number.label_tag }}
+                {{ form.contact_number }}
+                {{ form.contact_number.errors }}
+            </div>
+
+            <div>
+                {{ form.base_salary.label_tag }}
+                {{ form.base_salary }}
+                {{ form.base_salary.errors }}
+            </div>
+
+            <div>
+                {{ form.joined_since.label_tag }}
+                {{ form.joined_since }}
+                {{ form.joined_since.errors }}
+            </div>
+
+            <div>
+                {{ form.role.label_tag }}
+                {{ form.role }}
+                {{ form.role.errors }}
+            </div>
+
+            <div>
+                {{ form.fathers_name.label_tag }}
+                {{ form.fathers_name }}
+                {{ form.fathers_name.errors }}
+            </div>
+
+            <div>
+                {{ form.aadhar_no.label_tag }}
+                {{ form.aadhar_no }}
+                {{ form.aadhar_no.errors }}
+            </div>
+
+            <div>
+                {{ form.bank_name.label_tag }}
+                {{ form.bank_name }}
+                {{ form.bank_name.errors }}
+            </div>
+
+            <div>
+                {{ form.account_no.label_tag }}
+                {{ form.account_no }}
+                {{ form.account_no.errors }}
+            </div>
+
+            <div>
+                {{ form.ifsc_code.label_tag }}
+                {{ form.ifsc_code }}
+                {{ form.ifsc_code.errors }}
+            </div>
+
+            <div>
+                {{ form.uan_no.label_tag }}
+                {{ form.uan_no }}
+                {{ form.uan_no.errors }}
+            </div>
+
+            <div class="full-width">
+                {{ form.address.label_tag }}
+                {{ form.address }}
+                {{ form.address.errors }}
+            </div>
+
+        </div>
+
+        <div class="btn-row">
+            <button type="submit" class="btn-save">Save Changes</button>
+            <a href="{% url 'employees_list' %}" class="btn-back">Back to Employees</a>
+        </div>
+
+    </form>
+
+</div>
+
+</body>
+</html>
+{% endblock %}

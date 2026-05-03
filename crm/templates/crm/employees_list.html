@@ -153,9 +153,11 @@
                             {{ emp.user.first_name|first|default:emp.user.username|first|upper }}
                         </div>
                         <div>
-                            <h5 class="fw-bold m-0 text-dark">
-                                {{ emp.user.first_name }} {{ emp.user.last_name }}
-                            </h5>
+                            <a href="{% url 'employee_detail' emp.id %}" style="text-decoration:none;">
+    <h5 class="fw-bold m-0 text-dark">
+        {{ emp.user.first_name }} {{ emp.user.last_name }}
+    </h5>
+</a>
                             <span class="badge bg-secondary bg-opacity-10 text-secondary border mt-1 px-2 rounded-pill">
                                 {{ emp.role }}
                             </span>
@@ -222,6 +224,8 @@
                     </div>
 
                     <div class="emp-actions">
+
+                       
 
                         <a href="{% url 'employee_dashboard' emp.id %}"
                             class="btn border shadow-sm flex-grow-1 text-dark fw-medium btn-light hover-bg-white">

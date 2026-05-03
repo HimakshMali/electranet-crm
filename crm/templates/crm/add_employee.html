@@ -2,6 +2,7 @@
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Add Employee</title>
@@ -19,7 +20,7 @@
             min-height: 100vh;
             font-family: 'Inter', sans-serif;
             background:
-                linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.55)),
+                linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.55)),
                 url("https://plus.unsplash.com/premium_photo-1764459931051-d7da922bd5de?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D");
             background-size: cover;
             background-position: center;
@@ -36,8 +37,8 @@
             border-radius: 18px;
             background: rgba(15, 23, 42, 0.58);
             backdrop-filter: blur(16px);
-            border: 1px solid rgba(255,255,255,0.18);
-            box-shadow: 0 30px 80px rgba(0,0,0,0.48);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.48);
             color: white;
         }
 
@@ -50,16 +51,21 @@
         }
 
         .form-text,
-        .helptext,
-        small,
-        ul,
-        .alert,
-        .invalid-feedback {
+        .helptext {
             display: none !important;
         }
 
+        .invalid-feedback,
+        .alert,
+        ul.errorlist {
+            display: block !important;
+            color: #fecaca !important;
+            font-size: 13px;
+            margin-top: 6px;
+        }
+
         label {
-            color: rgba(255,255,255,0.92);
+            color: rgba(255, 255, 255, 0.92);
             font-size: 14px;
             font-weight: 600;
             margin-bottom: 7px;
@@ -78,7 +84,7 @@
             padding: 13px 4px !important;
             background: transparent !important;
             border: none !important;
-            border-bottom: 1.8px solid rgba(255,255,255,0.68) !important;
+            border-bottom: 1.8px solid rgba(255, 255, 255, 0.68) !important;
             outline: none !important;
             color: white !important;
             font-size: 15px !important;
@@ -96,7 +102,7 @@
 
         input::placeholder,
         textarea::placeholder {
-            color: rgba(255,255,255,0.6);
+            color: rgba(255, 255, 255, 0.6);
         }
 
         select option {
@@ -135,7 +141,7 @@
             display: block;
             margin-top: 24px;
             text-align: center;
-            color: rgba(255,255,255,0.92);
+            color: rgba(255, 255, 255, 0.92);
             text-decoration: none;
             font-size: 14px;
             font-weight: 600;
@@ -162,6 +168,20 @@
 
     <div class="employee-box">
         <h2>Add Employee</h2>
+        {% if messages %}
+        {% for message in messages %}
+        <div style="margin-bottom:15px; color:white; font-weight:700;">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        {% if form.errors %}
+        <div style="background:rgba(239,68,68,0.25); padding:12px; border-radius:8px; margin-bottom:18px;">
+            {{ form.errors }}
+        </div>
+        {% endif %}
+
 
         <form method="POST">
             {% csrf_token %}
@@ -174,4 +194,5 @@
     </div>
 
 </body>
+
 </html>

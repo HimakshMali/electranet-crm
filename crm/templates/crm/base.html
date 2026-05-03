@@ -278,6 +278,9 @@
 <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
     <i class="fa fa-area-chart"></i> Dashboard
 </a>
+<a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
+    <i class="fa fa-area-chart"></i> Expenses
+</a>
             {% endif %}
         </ul>
 

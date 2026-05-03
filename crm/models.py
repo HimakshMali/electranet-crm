@@ -190,6 +190,13 @@ class Employee(models.Model):
     joined_since = models.DateField()
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
 
+    fathers_name = models.CharField(max_length=150, blank=True, null=True)
+    aadhar_no = models.CharField(max_length=15, blank=True, null=True)
+    bank_name = models.CharField(max_length=150, blank=True, null=True)
+    account_no = models.CharField(max_length=20, blank=True, null=True)
+    ifsc_code = models.CharField(max_length=15, blank=True, null=True)
+    uan_no = models.CharField(max_length=15, blank=True, null=True)
+
     address = models.TextField()
     contact_number = models.CharField(max_length=15)
 
