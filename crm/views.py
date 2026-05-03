@@ -2,7 +2,7 @@ from django.shortcuts import get_object_or_404, render
 
 # Create your views here.
 
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import render,redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import UserCreationForm
@@ -12,10 +12,10 @@ from django.contrib.auth.models import Group
 from crm.functions.google_sheets_leads import fetch_leads_from_google_sheet
 # Create your views here.
 from .forms import  RegisterForm, EmployeeCreateForm, LeadForm,EmployeeUpdateForm, InvoiceForm, acticitefeedform
-from .models import ConvertedLeadItem, Project, Membership, Leads , Employee,Converted_leads, Products, FollowUp, LeadActivity, Display_leads, Client, Payment,activity_feed, SalaryRecord
+from .models import ConvertedLeadItem, Project, Membership, Leads , Employee,Converted_leads, Products, FollowUp, LeadActivity, Display_leads, Client, Payment,activity_feed, SalaryRecord, BusinessExpense, ExpenseCategory
 import random
 import string
-from django.db.models import Sum,Count
+from django.db.models import Q, Sum,Count
 
 
 from django.contrib import messages
@@ -31,7 +31,7 @@ from .models import Customer, Products
 from django.http import HttpResponse
 
 
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 
 from .functions.customer_invoice import generate_customer_invoice_pdf
@@ -39,6 +39,8 @@ from django.http import FileResponse
 
 
 from datetime import timedelta, datetime
+
+from django.views.decorators.http import require_POST
 
 @login_required(login_url='/login')
 def home(request):
@@ -1359,3 +1361,175 @@ def crm_dashboard(request):
 
     return render(request, "crm/dashboard.html", context)
 
+CATEGORY_COLORS = [
+    "#2563eb",  # blue
+    "#16a34a",  # green
+    "#9333ea",  # purple
+    "#ea580c",  # orange
+    "#dc2626",  # red
+    "#0891b2",  # cyan
+    "#4f46e5",  # indigo
+    "#be123c",  # rose
+    "#0f766e",  # teal
+    "#ca8a04",  # yellow
+]
+
+
+def get_category_color():
+    total_categories = ExpenseCategory.objects.count()
+    return CATEGORY_COLORS[total_categories % len(CATEGORY_COLORS)]
+
+@login_required(login_url="/login")
+def expenses(request):
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        category_name = request.POST.get("category", "").strip()
+        amount_value = request.POST.get("amount", "").strip()
+        date_value = request.POST.get("date", "").strip()
+        given_to = request.POST.get("given_to", "").strip()
+        notes = request.POST.get("notes", "").strip()
+
+        errors = {}
+
+        if not name:
+            errors["name"] = "Expense name is required."
+
+        if not amount_value:
+            errors["amount"] = "Amount is required."
+        else:
+            try:
+                amount = Decimal(amount_value)
+                if amount <= 0:
+                    errors["amount"] = "Amount must be greater than zero."
+            except InvalidOperation:
+                errors["amount"] = "Enter a valid amount."
+
+        if not date_value:
+            errors["date"] = "Date is required."
+        else:
+            try:
+                date_obj = datetime.strptime(date_value, "%Y-%m-%d").date()
+            except ValueError:
+                errors["date"] = "Enter a valid date."
+
+        if errors:
+            return JsonResponse({
+                "success": False,
+                "errors": errors
+            }, status=400)
+
+        category = None
+
+        if category_name:
+            category = ExpenseCategory.objects.filter(
+                name__iexact=category_name
+            ).first()
+
+            if not category:
+                category = ExpenseCategory.objects.create(
+                    name=category_name.title(),
+                    color=get_category_color()
+                )
+
+        expense = BusinessExpense.objects.create(
+            name=name,
+            category=category,
+            amount=amount,
+            date=date_obj,
+            given_to=given_to,
+            notes=notes,
+            created_by=request.user
+        )
+
+        return JsonResponse({
+            "success": True,
+            "expense": {
+                "id": expense.id,
+                "name": expense.name,
+                "category": expense.category.name if expense.category else "Uncategorized",
+                "category_color": expense.category.color if expense.category else "#64748b",
+                "amount": f"{expense.amount:.2f}",
+                "date": expense.date.strftime("%d %b %Y"),
+                "given_to": expense.given_to or "-",
+                "notes": expense.notes or "",
+            }
+        })
+
+    search_query = request.GET.get("q", "").strip()
+    sort_by = request.GET.get("sort", "-date")
+
+    allowed_sorts = {
+        "-date": "-date",
+        "date": "date",
+        "-amount": "-amount",
+        "amount": "amount",
+        "name": "name",
+        "category": "category__name",
+        "-created": "-created_at",
+    }
+
+    expenses_qs = BusinessExpense.objects.select_related(
+        "category",
+        "created_by"
+    )
+
+    if search_query:
+        expenses_qs = expenses_qs.filter(
+            Q(name__icontains=search_query) |
+            Q(category__name__icontains=search_query) |
+            Q(given_to__icontains=search_query) |
+            Q(notes__icontains=search_query)
+        )
+
+    expenses_qs = expenses_qs.order_by(
+        allowed_sorts.get(sort_by, "-date")
+    )
+
+    categories = ExpenseCategory.objects.all()
+
+    total_expense = expenses_qs.aggregate(
+        total=Sum("amount")
+    )["total"] or 0
+
+    today = timezone.localdate()
+
+    today_expense = expenses_qs.filter(
+        date=today
+    ).aggregate(
+        total=Sum("amount")
+    )["total"] or 0
+
+    context = {
+        "expenses": expenses_qs,
+        "categories": categories,
+        "search_query": search_query,
+        "sort_by": sort_by,
+        "total_expense": total_expense,
+        "today_expense": today_expense,
+        "today": today,
+    }
+
+    return render(request, "crm/expenses.html", context)
+
+
+@login_required(login_url="/login")
+@require_POST
+def delete_expense(request):
+    expense_id = request.POST.get("id")
+
+    if not expense_id:
+        return JsonResponse({"success": False, "error": "Invalid request"}, status=400)
+
+    try:
+        expense = BusinessExpense.objects.get(id=expense_id)
+
+        # 🔒 OPTIONAL SECURITY (recommended)
+        if expense.created_by != request.user:
+            return JsonResponse({"success": False, "error": "Not allowed"}, status=403)
+
+        expense.delete()
+
+        return JsonResponse({"success": True})
+
+    except BusinessExpense.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Expense not found"}, status=404)

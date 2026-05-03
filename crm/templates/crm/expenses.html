@@ -1,0 +1,1201 @@
+{% extends "crm/base.html" %}
+
+{% block content %}
+
+<div class="expense-page">
+
+    <!-- Header & Metrics Dashboard -->
+    <div class="dashboard-header">
+        <div class="header-titles">
+            <p class="eyebrow">Financial Overview</p>
+            <h1>Expense Tracker</h1>
+            <p class="subtitle">Manage and track your business outflow, vendors, and categories.</p>
+        </div>
+
+        <div class="metrics-container">
+            <!-- Primary Dark Corporate Card -->
+            <div class="metric-card primary-metric">
+                <div class="metric-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+                </div>
+                <div class="metric-details">
+                    <span class="metric-label">Total Expenses</span>
+                    <span class="metric-value">₹{{ total_expense|floatformat:2 }}</span>
+                </div>
+            </div>
+
+            <!-- Secondary Light Card -->
+            <div class="metric-card secondary-metric">
+                <div class="metric-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                </div>
+                <div class="metric-details">
+                    <span class="metric-label">Added Today</span>
+                    <span class="metric-value">₹{{ today_expense|floatformat:2 }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter & View Toolbar -->
+    <div class="controls-toolbar">
+        <form method="GET" class="filter-form">
+            <div class="search-wrapper">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input
+                    type="text"
+                    name="q"
+                    value="{{ search_query }}"
+                    placeholder="Search by expense, category, or vendor..."
+                >
+            </div>
+
+            <div class="filter-actions">
+                <select name="sort" class="corporate-select" onchange="this.form.submit()">
+                    <option value="-date" {% if sort_by == "-date" %}selected{% endif %}>Newest First</option>
+                    <option value="date" {% if sort_by == "date" %}selected{% endif %}>Oldest First</option>
+                    <option value="-amount" {% if sort_by == "-amount" %}selected{% endif %}>Highest Amount</option>
+                    <option value="amount" {% if sort_by == "amount" %}selected{% endif %}>Lowest Amount</option>
+                    <option value="name" {% if sort_by == "name" %}selected{% endif %}>Name (A-Z)</option>
+                    <option value="category" {% if sort_by == "category" %}selected{% endif %}>Category (A-Z)</option>
+                </select>
+
+                <button type="submit" class="btn-outline">Filter</button>
+                
+                <div class="view-toggle">
+                    <button type="button" class="view-btn active" id="btnListView" onclick="setView('List')" title="List View">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                    </button>
+                    <button type="button" class="view-btn" id="btnGridView" onclick="setView('Grid')" title="Grid View">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- LIST VIEW -->
+    <div id="listView" class="view-section active">
+        <div class="table-container">
+            <table class="corporate-table">
+                <thead>
+                    <tr>
+                        <th>Expense Details</th>
+                        <th>Category</th>
+                        <th>Amount</th>
+                        <th>Date</th>
+                        <th>Vendor / Person</th>
+                        <th>Notes</th>
+                        <th class="text-right">Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody id="expenseTableBody">
+                    {% for expense in expenses %}
+                    <tr id="expense-row-{{ expense.id }}">
+                        <td>
+                            <div class="expense-name">{{ expense.name }}</div>
+                        </td>
+
+                        <td>
+                            {% if expense.category %}
+                                <span class="badge" style="--badge-color: {{ expense.category.color }};">
+                                    {{ expense.category.name }}
+                                </span>
+                            {% else %}
+                                <span class="badge badge-neutral">Uncategorized</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="amount-cell">
+                            ₹{{ expense.amount|floatformat:2 }}
+                        </td>
+
+                        <td class="date-cell">
+                            {{ expense.date|date:"d M, Y" }}
+                        </td>
+
+                        <td class="vendor-cell">
+                            {{ expense.given_to|default:"-" }}
+                        </td>
+
+                        <td class="notes-cell">
+                            <span class="truncate-text" title="{{ expense.notes }}">{{ expense.notes|default:"-" }}</span>
+                        </td>
+
+                        <td class="text-right">
+                            <button type="button" class="btn-delete" onclick="deleteExpense({{ expense.id }})">
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr id="emptyStateRowList">
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+                                <h3>No Expense Records</h3>
+                                <p>You haven't recorded any expenses yet. Click the + button to add one.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- GRID VIEW -->
+    <div id="gridView" class="view-section">
+        <div class="corporate-grid" id="expenseGridContainer">
+            {% for expense in expenses %}
+            <div class="grid-card" id="expense-card-{{ expense.id }}">
+                <div class="card-top">
+                    {% if expense.category %}
+                        <span class="badge" style="--badge-color: {{ expense.category.color }};">
+                            {{ expense.category.name }}
+                        </span>
+                    {% else %}
+                        <span class="badge badge-neutral">Uncategorized</span>
+                    {% endif %}
+                    <div class="card-amount">₹{{ expense.amount|floatformat:2 }}</div>
+                </div>
+                
+                <div class="card-main">
+                    <h3 class="card-title">{{ expense.name }}</h3>
+                    <div class="card-info-row">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        <span>{{ expense.date|date:"d M, Y" }}</span>
+                    </div>
+                    {% if expense.given_to %}
+                    <div class="card-info-row">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        <span>{{ expense.given_to }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="card-bottom">
+                    <button type="button" class="btn-delete-icon" onclick="deleteExpense({{ expense.id }})" title="Delete Expense">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        Remove
+                    </button>
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-state grid-empty" id="emptyStateRowGrid">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+                <h3>No Expense Records</h3>
+                <p>You haven't recorded any expenses yet. Click the + button to add one.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+
+<!-- Floating Action Button -->
+<button class="fab-button" onclick="openExpenseModal()">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+</button>
+
+<!-- Add Expense Modal -->
+<div class="corporate-modal-overlay" id="expenseModal">
+    <div class="corporate-modal">
+        <div class="modal-header">
+            <div>
+                <h2>Record New Expense</h2>
+                <p>Fill in the details below to track an outgoing payment.</p>
+            </div>
+            <button type="button" class="btn-close" onclick="closeExpenseModal()">✕</button>
+        </div>
+
+        <form id="expenseForm">
+            {% csrf_token %}
+
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label>Expense Name <span class="required">*</span></label>
+                    <input type="text" name="name" id="expenseName" placeholder="e.g., Office Rent, Server Hosting, Raw Materials" required autocomplete="off" class="corporate-input">
+                    <small class="error-text" data-error="name"></small>
+                </div>
+
+                <div class="form-group">
+                    <label>Category</label>
+                    <input list="categoryList" name="category" id="expenseCategory" placeholder="Select or type new" autocomplete="off" class="corporate-input">
+                    <datalist id="categoryList">
+                        {% for category in categories %}
+                            <option value="{{ category.name }}"></option>
+                        {% endfor %}
+                    </datalist>
+                </div>
+
+                <div class="form-group">
+                    <label>Amount (₹) <span class="required">*</span></label>
+                    <input type="number" name="amount" id="expenseAmount" placeholder="0.00" step="0.01" min="0" required class="corporate-input">
+                    <small class="error-text" data-error="amount"></small>
+                </div>
+
+                <div class="form-group">
+                    <label>Transaction Date <span class="required">*</span></label>
+                    <input type="date" name="date" id="expenseDate" value="{{ today|date:'Y-m-d' }}" required class="corporate-input">
+                    <small class="error-text" data-error="date"></small>
+                </div>
+
+                <div class="form-group">
+                    <label>Vendor / Given To</label>
+                    <input type="text" name="given_to" id="expenseGivenTo" placeholder="Business or Person name" autocomplete="off" class="corporate-input">
+                </div>
+
+                <div class="form-group full-width">
+                    <label>Internal Notes</label>
+                    <textarea name="notes" id="expenseNotes" placeholder="Any additional details regarding this expense..." rows="2" class="corporate-input"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeExpenseModal()">Cancel</button>
+                <button type="submit" class="btn-primary" id="saveExpenseBtn">Save Expense</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Notification Toast -->
+<div id="toast" class="corporate-toast">
+    <div class="toast-content">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        <span id="toastMessage">Action completed</span>
+    </div>
+</div>
+
+<style>
+    /* Professional Corporate Color Palette */
+    :root {
+        --bg-body: #f4f5f7;        /* Slight gray for app background */
+        --bg-surface: #ffffff;     /* Pure white for cards/tables */
+        --border-color: #e5e7eb;   /* Crisp gray borders */
+        --text-main: #111827;      /* Near black for high contrast */
+        --text-secondary: #6b7280; /* Neutral gray for labels/notes */
+        --brand-primary: #1d4ed8;  /* Deep corporate blue */
+        --brand-hover: #1e40af;    /* Darker blue on hover */
+        --brand-dark: #0f172a;     /* Very dark blue/slate for metrics */
+        --danger-color: #dc2626;   /* Standard red for deletion */
+        --danger-bg: #fef2f2;
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        --font-stack: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+        margin: 0;
+        font-family: var(--font-stack);
+        background-color: var(--bg-body);
+        color: var(--text-main);
+    }
+
+    .expense-page {
+        padding: 32px 40px;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    /* Dashboard Header */
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-bottom: 32px;
+        flex-wrap: wrap;
+        gap: 24px;
+    }
+
+    .header-titles .eyebrow {
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--brand-primary);
+        margin: 0 0 8px 0;
+    }
+
+    .header-titles h1 {
+        font-size: 32px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        margin: 0 0 8px 0;
+        color: var(--text-main);
+    }
+
+    .header-titles .subtitle {
+        color: var(--text-secondary);
+        font-size: 15px;
+        margin: 0;
+    }
+
+    /* Metric Cards */
+    .metrics-container {
+        display: flex;
+        gap: 16px;
+    }
+
+    .metric-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 20px 24px;
+        border-radius: 12px;
+        min-width: 240px;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--border-color);
+    }
+
+    .primary-metric {
+        background: var(--brand-dark);
+        border-color: var(--brand-dark);
+        color: white;
+    }
+
+    .primary-metric .metric-icon {
+        background: rgba(255,255,255,0.1);
+        color: white;
+    }
+
+    .primary-metric .metric-label {
+        color: #94a3b8;
+    }
+
+    .primary-metric .metric-value {
+        color: white;
+    }
+
+    .secondary-metric {
+        background: var(--bg-surface);
+    }
+
+    .secondary-metric .metric-icon {
+        background: #f1f5f9;
+        color: var(--brand-primary);
+    }
+
+    .metric-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .metric-details {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .metric-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .metric-value {
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+    }
+
+    /* Toolbar & Filters */
+    .controls-toolbar {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 24px;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .filter-form {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .search-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--bg-body);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 8px 16px;
+        flex: 1;
+        min-width: 300px;
+        max-width: 500px;
+        transition: all 0.2s;
+    }
+    
+    .search-wrapper:focus-within {
+        border-color: var(--brand-primary);
+        box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.1);
+    }
+
+    .search-wrapper svg {
+        color: var(--text-secondary);
+    }
+
+    .search-wrapper input {
+        border: none;
+        background: transparent;
+        width: 100%;
+        font-size: 14px;
+        color: var(--text-main);
+        outline: none;
+    }
+
+    .filter-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .corporate-select {
+        appearance: none;
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 9px 36px 9px 12px;
+        font-size: 14px;
+        color: var(--text-main);
+        font-weight: 500;
+        cursor: pointer;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+    }
+
+    .btn-outline {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        color: var(--text-main);
+        font-weight: 600;
+        font-size: 14px;
+        padding: 9px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .btn-outline:hover {
+        background: var(--bg-body);
+    }
+
+    /* View Toggle */
+    .view-toggle {
+        display: flex;
+        background: var(--bg-body);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 3px;
+    }
+
+    .view-btn {
+        background: transparent;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+    }
+
+    .view-btn:hover {
+        color: var(--text-main);
+    }
+
+    .view-btn.active {
+        background: var(--bg-surface);
+        color: var(--brand-primary);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--border-color);
+    }
+
+    /* View Sections */
+    .view-section {
+        display: none;
+    }
+
+    .view-section.active {
+        display: block;
+        animation: fadeIn 0.3s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Corporate Table (List View) */
+    .table-container {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        overflow: hidden; /* rounded corners fix */
+        box-shadow: var(--shadow-sm);
+    }
+
+    .corporate-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
+
+    .corporate-table thead {
+        background: #f9fafb;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .corporate-table th {
+        padding: 14px 20px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .corporate-table td {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border-color);
+        font-size: 14px;
+        color: var(--text-main);
+        vertical-align: middle;
+    }
+
+    .corporate-table tbody tr {
+        transition: background-color 0.15s ease;
+    }
+
+    .corporate-table tbody tr:hover {
+        background-color: #f9fafb;
+    }
+
+    .corporate-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .expense-name {
+        font-weight: 600;
+        color: var(--text-main);
+    }
+
+    .amount-cell {
+        font-weight: 700;
+        font-family: monospace;
+        font-size: 15px;
+        color: var(--text-main);
+    }
+
+    .date-cell, .vendor-cell {
+        color: var(--text-secondary);
+        font-size: 13px;
+    }
+
+    .truncate-text {
+        display: inline-block;
+        max-width: 200px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: var(--text-secondary);
+        font-size: 13px;
+    }
+
+    .text-right {
+        text-align: right;
+    }
+
+    /* Corporate Grid (Grid View) */
+    .corporate-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 20px;
+    }
+
+    .grid-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        box-shadow: var(--shadow-sm);
+        display: flex;
+        flex-direction: column;
+        transition: box-shadow 0.2s, border-color 0.2s;
+    }
+
+    .grid-card:hover {
+        box-shadow: var(--shadow-md);
+        border-color: #d1d5db;
+    }
+
+    .card-top {
+        padding: 16px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .card-amount {
+        font-weight: 700;
+        font-size: 18px;
+        font-family: monospace;
+    }
+
+    .card-main {
+        padding: 20px;
+        flex-grow: 1;
+    }
+
+    .card-title {
+        margin: 0 0 16px 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-main);
+    }
+
+    .card-info-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--text-secondary);
+        font-size: 13px;
+        margin-bottom: 8px;
+    }
+
+    .card-info-row svg {
+        color: #9ca3af;
+    }
+
+    .card-bottom {
+        padding: 12px 20px;
+        background: #f9fafb;
+        border-top: 1px solid var(--border-color);
+        border-radius: 0 0 8px 8px;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    /* Badges */
+    .badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--badge-color);
+        background-color: color-mix(in srgb, var(--badge-color) 10%, white);
+        border: 1px solid color-mix(in srgb, var(--badge-color) 25%, transparent);
+    }
+
+    .badge-neutral {
+        color: var(--text-secondary);
+        background-color: #f3f4f6;
+        border-color: var(--border-color);
+    }
+
+    /* Buttons */
+    .btn-delete {
+        background: transparent;
+        color: var(--danger-color);
+        border: none;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 6px 12px;
+        border-radius: 4px;
+        transition: background 0.2s;
+    }
+
+    .btn-delete:hover {
+        background: var(--danger-bg);
+    }
+
+    .btn-delete-icon {
+        background: transparent;
+        color: var(--text-secondary);
+        border: none;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: color 0.2s;
+    }
+
+    .btn-delete-icon:hover {
+        color: var(--danger-color);
+    }
+
+    /* Empty States */
+    .empty-state {
+        padding: 64px 20px;
+        text-align: center;
+        color: var(--text-secondary);
+    }
+
+    .grid-empty {
+        grid-column: 1 / -1;
+        background: var(--bg-surface);
+        border: 1px dashed #d1d5db;
+        border-radius: 8px;
+    }
+
+    .empty-state svg {
+        color: #9ca3af;
+        margin-bottom: 16px;
+    }
+
+    .empty-state h3 {
+        margin: 0 0 8px 0;
+        font-size: 18px;
+        color: var(--text-main);
+    }
+
+    .empty-state p {
+        margin: 0;
+        font-size: 14px;
+    }
+
+    /* FAB */
+    .fab-button {
+        position: fixed;
+        bottom: 40px;
+        right: 40px;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background-color: var(--brand-primary);
+        color: white;
+        border: none;
+        box-shadow: 0 10px 15px -3px rgba(29, 78, 216, 0.4);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s, background-color 0.2s;
+        z-index: 100;
+    }
+
+    .fab-button:hover {
+        transform: translateY(-2px);
+        background-color: var(--brand-hover);
+    }
+
+    /* Modal Form */
+    .corporate-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(17, 24, 39, 0.6);
+        backdrop-filter: blur(2px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 200;
+    }
+
+    .corporate-modal-overlay.active {
+        display: flex;
+    }
+
+    .corporate-modal {
+        background: var(--bg-surface);
+        width: 100%;
+        max-width: 600px;
+        border-radius: 12px;
+        box-shadow: var(--shadow-lg);
+        animation: slideUp 0.2s ease-out;
+    }
+
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .modal-header {
+        padding: 24px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+
+    .modal-header h2 {
+        margin: 0 0 4px 0;
+        font-size: 20px;
+        font-weight: 700;
+    }
+
+    .modal-header p {
+        margin: 0;
+        font-size: 14px;
+        color: var(--text-secondary);
+    }
+
+    .btn-close {
+        background: transparent;
+        border: none;
+        font-size: 18px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 4px;
+    }
+    
+    .btn-close:hover { color: var(--text-main); }
+
+    .form-grid {
+        padding: 24px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .full-width {
+        grid-column: 1 / -1;
+    }
+
+    .form-group label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-main);
+    }
+
+    .required {
+        color: var(--danger-color);
+    }
+
+    .corporate-input {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 10px 12px;
+        font-size: 14px;
+        color: var(--text-main);
+        outline: none;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        font-family: inherit;
+    }
+
+    .corporate-input:focus {
+        border-color: var(--brand-primary);
+        box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.1);
+    }
+
+    .error-text {
+        color: var(--danger-color);
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+    .modal-footer {
+        padding: 16px 24px;
+        background: #f9fafb;
+        border-top: 1px solid var(--border-color);
+        border-radius: 0 0 12px 12px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+    }
+
+    .btn-secondary {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        padding: 10px 16px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--text-main);
+        cursor: pointer;
+    }
+
+    .btn-primary {
+        background: var(--brand-primary);
+        border: 1px solid var(--brand-primary);
+        padding: 10px 24px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        color: white;
+        cursor: pointer;
+    }
+
+    .btn-primary:hover {
+        background: var(--brand-hover);
+    }
+
+    .btn-primary:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+
+    /* Toast */
+    .corporate-toast {
+        position: fixed;
+        bottom: 40px;
+        left: 50%;
+        transform: translateX(-50%) translateY(100px);
+        background: var(--text-main);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 500;
+        font-size: 14px;
+        box-shadow: var(--shadow-lg);
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        z-index: 300;
+    }
+
+    .corporate-toast.active {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+
+    .toast-content {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .toast-content svg {
+        color: #4ade80; /* Success green */
+    }
+
+    @media (max-width: 800px) {
+        .expense-page { padding: 20px; }
+        .metrics-container { width: 100%; flex-direction: column; }
+        .metric-card { width: 100%; }
+        .form-grid { grid-template-columns: 1fr; }
+        .search-wrapper { max-width: 100%; }
+        .table-container { overflow-x: auto; }
+        .corporate-table { min-width: 800px; }
+    }
+</style>
+
+<script>
+    const modal = document.getElementById("expenseModal");
+    const form = document.getElementById("expenseForm");
+    const saveBtn = document.getElementById("saveExpenseBtn");
+    const tableBody = document.getElementById("expenseTableBody");
+    const gridContainer = document.getElementById("expenseGridContainer");
+    const toast = document.getElementById("toast");
+    const toastMessage = document.getElementById("toastMessage");
+
+    // View Logic
+    function setView(view) {
+        document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('btn' + view + 'View').classList.add('active');
+        
+        document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
+        document.getElementById(view.toLowerCase() + 'View').classList.add('active');
+        
+        localStorage.setItem('corporateExpenseView', view);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedView = localStorage.getItem('corporateExpenseView') || 'List';
+        setView(savedView);
+    });
+
+    // Modal Logic
+    function openExpenseModal() {
+        modal.classList.add("active");
+        setTimeout(() => document.getElementById("expenseName").focus(), 100);
+    }
+
+    function closeExpenseModal() {
+        modal.classList.remove("active");
+    }
+
+    function showToast(message) {
+        toastMessage.textContent = message;
+        toast.classList.add("active");
+        setTimeout(() => toast.classList.remove("active"), 3000);
+    }
+
+    function clearErrors() {
+        document.querySelectorAll(".error-text").forEach(el => el.textContent = "");
+    }
+
+    function getCSRFToken() {
+        return document.querySelector("[name=csrfmiddlewaretoken]").value;
+    }
+
+    function escapeHtml(text) {
+        if (!text) return "";
+        return text.toString().replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+    }
+
+    function addExpenseDOM(expense) {
+        // Remove empty states
+        const emptyList = document.getElementById("emptyStateRowList");
+        const emptyGrid = document.getElementById("emptyStateRowGrid");
+        if (emptyList) emptyList.remove();
+        if (emptyGrid) emptyGrid.remove();
+
+        const safeName = escapeHtml(expense.name);
+        const safeCat = escapeHtml(expense.category);
+        const safeGivenTo = escapeHtml(expense.given_to);
+        const safeNotes = expense.notes ? escapeHtml(expense.notes) : "-";
+        
+        const badgeHtml = expense.category 
+            ? `<span class="badge" style="--badge-color: ${escapeHtml(expense.category_color)};">${safeCat}</span>`
+            : `<span class="badge badge-neutral">Uncategorized</span>`;
+
+        // Add to Table
+        const tr = document.createElement("tr");
+        tr.id = `expense-row-${expense.id}`;
+        tr.innerHTML = `
+            <td><div class="expense-name">${safeName}</div></td>
+            <td>${badgeHtml}</td>
+            <td class="amount-cell">₹${expense.amount}</td>
+            <td class="date-cell">${escapeHtml(expense.date)}</td>
+            <td class="vendor-cell">${safeGivenTo || "-"}</td>
+            <td class="notes-cell"><span class="truncate-text" title="${safeNotes}">${safeNotes}</span></td>
+            <td class="text-right"><button type="button" class="btn-delete" onclick="deleteExpense(${expense.id})">Delete</button></td>
+        `;
+        tableBody.prepend(tr);
+
+        // Add to Grid
+        const card = document.createElement("div");
+        card.className = "grid-card";
+        card.id = `expense-card-${expense.id}`;
+        card.innerHTML = `
+            <div class="card-top">
+                ${badgeHtml}
+                <div class="card-amount">₹${expense.amount}</div>
+            </div>
+            <div class="card-main">
+                <h3 class="card-title">${safeName}</h3>
+                <div class="card-info-row">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    <span>${escapeHtml(expense.date)}</span>
+                </div>
+                ${safeGivenTo ? `
+                <div class="card-info-row">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <span>${safeGivenTo}</span>
+                </div>` : ''}
+            </div>
+            <div class="card-bottom">
+                <button type="button" class="btn-delete-icon" onclick="deleteExpense(${expense.id})" title="Delete">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    Remove
+                </button>
+            </div>
+        `;
+        gridContainer.prepend(card);
+    }
+
+    form.addEventListener("submit", async function(event) {
+        event.preventDefault();
+        clearErrors();
+
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Processing...";
+
+        const formData = new FormData(form);
+
+        try {
+            const response = await fetch("{% url 'expenses' %}", {
+                method: "POST",
+                headers: { "X-CSRFToken": getCSRFToken() },
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                if (data.errors) {
+                    Object.keys(data.errors).forEach(key => {
+                        const errEl = document.querySelector(`[data-error="${key}"]`);
+                        if (errEl) errEl.textContent = data.errors[key];
+                    });
+                }
+                return;
+            }
+
+            if (data.success) {
+                addExpenseDOM(data.expense);
+                
+                // Keep date as per your preference, reset rest
+                const dateValue = document.getElementById("expenseDate").value;
+                form.reset();
+                document.getElementById("expenseDate").value = dateValue;
+                document.getElementById("expenseName").focus();
+                
+                showToast("Expense successfully recorded.");
+            }
+        } catch (error) {
+            alert("Network error. Please try again.");
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = "Save Expense";
+        }
+    });
+
+    async function deleteExpense(id) {
+        if (!confirm("Delete this expense record? This cannot be undone.")) return;
+
+        try {
+            const response = await fetch("{% url 'delete_expense' %}", {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": getCSRFToken(),
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: `id=${encodeURIComponent(id)}`
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                const row = document.getElementById(`expense-row-${id}`);
+                const card = document.getElementById(`expense-card-${id}`);
+                if (row) row.remove();
+                if (card) card.remove();
+                
+                showToast("Expense record removed.");
+            } else {
+                alert(data.error || "Delete failed.");
+            }
+        } catch (error) {
+            alert("Error connecting to server.");
+        }
+    }
+
+    // Modal dismissals
+    modal.addEventListener("click", e => { if (e.target === modal) closeExpenseModal(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape" && modal.classList.contains("active")) closeExpenseModal(); });
+    form.addEventListener("keydown", e => {
+        if (e.key === "Enter" && e.target.tagName.toLowerCase() !== "textarea") {
+            e.preventDefault();
+            form.requestSubmit();
+        }
+    });
+</script>
+
+{% endblock %}

@@ -61,4 +61,8 @@ urlpatterns = [
 
     path('employees/<int:employee_id>/', views.employee_detail, name='employee_detail'),
 
+
+    path("expenses/", views.expenses, name="expenses"),
+    path("delete-expense/", views.delete_expense, name="delete_expense"),
+
 ]
