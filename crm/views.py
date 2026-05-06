@@ -12,7 +12,7 @@ from django.contrib.auth.models import Group
 from crm.functions.google_sheets_leads import fetch_leads_from_google_sheet
 # Create your views here.
 from .forms import  RegisterForm, EmployeeCreateForm, LeadForm,EmployeeUpdateForm, InvoiceForm, acticitefeedform
-from .models import ConvertedLeadItem, Project, Membership, Leads , Employee,Converted_leads, Products, FollowUp, LeadActivity, Display_leads, Client, Payment,activity_feed, SalaryRecord, BusinessExpense, ExpenseCategory
+from .models import ConvertedLeadItem, Project, Membership, Leads , Employee,Converted_leads, Products, FollowUp, LeadActivity, Display_leads, Client, Payment,activity_feed, SalaryRecord, BusinessExpense, ExpenseCategory, MaterialPurchase, MaterialPayment
 import random
 import string
 from django.db.models import Q, Sum,Count
@@ -1010,42 +1010,76 @@ def add_activity_feed_post(request):
 
 
 
-@login_required(login_url='/login')
+@login_required
 def employee_salary(request, employee_id):
-    employee = get_object_or_404(Employee, id = employee_id)
+    employee = get_object_or_404(Employee, id=employee_id)
 
-    if request.method == 'POST':
+    if request.method == "POST":
+        action = request.POST.get("action")
+
         month = request.POST.get("month")
         year = request.POST.get("year")
-        base_salary = request.POST.get("base_salary")
+        base_salary = request.POST.get("base_salary") or 0
         total_bonus = request.POST.get("total_bonus") or 0
         total_deductions = request.POST.get("total_deductions") or 0
         status = request.POST.get("status")
-        notes = request.POST.get("notes")
+        notes = request.POST.get("notes", "")
 
-        SalaryRecord.objects.create(
-            employee = employee,
-            month=month,
-            year=int(year),
-            base_salary=Decimal(base_salary),
-            total_bonus=Decimal(total_bonus),
-            total_deductions=Decimal(total_deductions),
-            status=status,
-            notes=notes,
+        if action == "add_salary":
+            SalaryRecord.objects.create(
+                employee=employee,
+                month=month,
+                year=year,
+                base_salary=Decimal(str(base_salary)),
+                total_bonus=Decimal(str(total_bonus)),
+                total_deductions=Decimal(str(total_deductions)),
+                status=status,
+                notes=notes,
+            )
 
-        )
+            messages.success(request, "Salary record added successfully.")
+            return redirect("salary", employee_id=employee.id)
 
-        return redirect('employee_salary', employee_id = employee.id)
-    
+        elif action == "edit_salary":
+            salary_id = request.POST.get("salary_id")
+            salary_record = get_object_or_404(
+                SalaryRecord,
+                id=salary_id,
+                employee=employee
+            )
 
-    salary_records = SalaryRecord.objects.filter(employee=employee).order_by('-year', '-created_at')
+            salary_record.month = month
+            salary_record.year = year
+            salary_record.base_salary = Decimal(str(base_salary))
+            salary_record.total_bonus = Decimal(str(total_bonus))
+            salary_record.total_deductions = Decimal(str(total_deductions))
+            salary_record.status = status
+            salary_record.notes = notes
+            salary_record.save()
 
-    return render(request, 'crm/salary.html', {
-        'employee': employee,
-        'salary_records': salary_records,
-    })
+            messages.success(request, "Salary record updated successfully.")
+            return redirect("salary", employee_id=employee.id)
 
+        elif action == "delete_salary":
+            salary_id = request.POST.get("salary_id")
+            salary_record = get_object_or_404(
+                SalaryRecord,
+                id=salary_id,
+                employee=employee
+            )
+            salary_record.delete()
 
+            messages.success(request, "Salary record deleted successfully.")
+            return redirect("salary", employee_id=employee.id)
+
+    salary_records = SalaryRecord.objects.filter(employee=employee).order_by("-year", "-id")
+
+    context = {
+        "employee": employee,
+        "salary_records": salary_records,
+    }
+
+    return render(request, "crm/salary.html", context)
 
 @login_required(login_url='/login')
 def customer_invoice(request, converted_lead_id):
@@ -1533,3 +1567,245 @@ def delete_expense(request):
 
     except BusinessExpense.DoesNotExist:
         return JsonResponse({"success": False, "error": "Expense not found"}, status=404)
+    
+
+
+
+@login_required
+def material_purchase(request):
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        if action == "add_purchase":
+            MaterialPurchase.objects.create(
+                material_name=request.POST.get("material_name"),
+                vendor_name=request.POST.get("vendor_name"),
+                amount=request.POST.get("amount"),
+                date=request.POST.get("date"),
+                created_by=request.user
+            )
+            messages.success(request, "Material purchase added successfully.")
+            return redirect("material_purchase")
+
+        elif action == "add_payment":
+            purchase = get_object_or_404(
+                MaterialPurchase,
+                id=request.POST.get("purchase_id")
+            )
+
+            payment_amount = Decimal(request.POST.get("payment_amount", "0"))
+
+            if payment_amount <= 0:
+                messages.error(request, "Payment amount must be greater than zero.")
+                return redirect("material_purchase")
+
+            if payment_amount > purchase.remaining_amount:
+                messages.error(request, "Payment cannot be greater than remaining amount.")
+                return redirect("material_purchase")
+
+            MaterialPayment.objects.create(
+                purchase=purchase,
+                amount=payment_amount,
+                payment_date=request.POST.get("payment_date"),
+                payment_mode=request.POST.get("payment_mode"),
+                note=request.POST.get("note"),
+                created_by=request.user
+            )
+
+            messages.success(request, "Payment added successfully.")
+            return redirect("material_purchase")
+
+        elif action == "delete_purchase":
+            purchase = get_object_or_404(
+                MaterialPurchase,
+                id=request.POST.get("purchase_id")
+            )
+            purchase.delete()
+            messages.success(request, "Purchase deleted.")
+            return redirect("material_purchase")
+
+        elif action == "delete_payment":
+            payment = get_object_or_404(
+                MaterialPayment,
+                id=request.POST.get("payment_id")
+            )
+            payment.delete()
+            messages.success(request, "Payment deleted.")
+            return redirect("material_purchase")
+
+    search_query = request.GET.get("q", "")
+    sort_by = request.GET.get("sort", "-date")
+
+    purchases = MaterialPurchase.objects.prefetch_related("payments").all()
+
+    if search_query:
+        purchases = purchases.filter(
+            Q(material_name__icontains=search_query) |
+            Q(vendor_name__icontains=search_query)
+        )
+
+    allowed_sort = ["-date", "date", "-amount", "amount"]
+
+    if sort_by not in allowed_sort:
+        sort_by = "-date"
+
+    purchases = purchases.order_by(sort_by)
+
+    total_purchase = purchases.aggregate(
+        total=Sum("amount")
+    )["total"] or Decimal("0.00")
+
+    total_paid = Decimal("0.00")
+
+    for purchase in purchases:
+        total_paid += purchase.total_paid
+
+    total_due = total_purchase - total_paid
+
+    context = {
+        "purchases": purchases,
+        "search_query": search_query,
+        "sort_by": sort_by,
+        "total_purchase": total_purchase,
+        "total_paid": total_paid,
+        "total_due": total_due,
+    }
+
+    return render(request, "crm/materialpurchase.html", context)
+
+
+def safe_money(value):
+    if callable(value):
+        value = value()
+
+    if value is None:
+        return Decimal("0")
+
+    return Decimal(str(value))
+
+
+@login_required
+def sales(request):
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        if action == "add_payment":
+            client_id = request.POST.get("client_id")
+            amount = request.POST.get("amount")
+            note = request.POST.get("note", "")
+
+            lead = Converted_leads.objects.filter(client_id=client_id).first()
+
+            if lead and lead.client:
+                try:
+                    amount = Decimal(str(amount))
+
+                    if amount <= 0:
+                        messages.error(request, "Payment amount must be greater than zero.")
+                    else:
+                        lead.client.payments.create(
+                            amount=amount,
+                            note=note
+                        )
+                        messages.success(request, "Payment added successfully.")
+
+                except Exception:
+                    messages.error(request, "Invalid payment amount.")
+
+            return redirect("sales")
+
+        if action == "delete_converted_lead":
+            converted_lead_id = request.POST.get("converted_lead_id")
+            lead = get_object_or_404(Converted_leads, id=converted_lead_id)
+            lead.delete()
+            messages.success(request, "Sale deleted successfully.")
+            return redirect("sales")
+
+    search = request.GET.get("search", "")
+    payment_status = request.GET.get("payment_status", "")
+    sort_by = request.GET.get("sort", "latest")
+
+    leads = (
+        Converted_leads.objects
+        .select_related("lead", "closed_by", "client")
+        .prefetch_related("client__payments")
+    )
+
+    if search:
+        leads = leads.filter(
+            Q(lead__name__icontains=search) |
+            Q(lead__phone__icontains=search) |
+            Q(lead__email__icontains=search) |
+            Q(product_bought__icontains=search) |
+            Q(closed_by__username__icontains=search)
+        )
+
+    if sort_by == "oldest":
+        leads = leads.order_by("closed_at")
+    elif sort_by == "highest":
+        leads = leads.order_by("-revenue_from_customer")
+    elif sort_by == "lowest":
+        leads = leads.order_by("revenue_from_customer")
+    else:
+        leads = leads.order_by("-closed_at")
+
+    filtered_leads = []
+
+    total_sales = Decimal("0")
+    total_billed = Decimal("0")
+    total_paid = Decimal("0")
+    total_due = Decimal("0")
+
+    for lead in leads:
+        revenue = safe_money(lead.revenue_from_customer)
+
+        billed = Decimal("0")
+        paid = Decimal("0")
+        due = Decimal("0")
+
+        lead.sales_payment_status = "No Client"
+
+        if lead.client:
+            billed = safe_money(lead.client.billed_amount)
+            paid = safe_money(lead.client.total_paid)
+            due = safe_money(lead.client.remaining_amount)
+
+            lead.sales_total_paid = paid
+            lead.sales_remaining_amount = due
+            lead.sales_billed_amount = billed
+
+            if due <= 0:
+                lead.sales_payment_status = "Paid"
+            elif paid > 0:
+                lead.sales_payment_status = "Partial"
+            else:
+                lead.sales_payment_status = "Unpaid"
+        else:
+            lead.sales_total_paid = Decimal("0")
+            lead.sales_remaining_amount = Decimal("0")
+            lead.sales_billed_amount = Decimal("0")
+
+        if payment_status:
+            if lead.sales_payment_status.lower() != payment_status.lower():
+                continue
+
+        total_sales += revenue
+        total_billed += billed
+        total_paid += paid
+        total_due += due
+
+        filtered_leads.append(lead)
+
+    context = {
+        "leads": filtered_leads,
+        "search": search,
+        "payment_status": payment_status,
+        "sort_by": sort_by,
+        "total_sales": total_sales,
+        "total_billed": total_billed,
+        "total_paid": total_paid,
+        "total_due": total_due,
+        "total_customers": len(filtered_leads),
+    }
+
+    return render(request, "crm/sales.html", context)

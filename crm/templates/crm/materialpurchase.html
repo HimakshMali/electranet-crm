@@ -1,0 +1,842 @@
+{% extends "crm/base.html" %}
+{% block content %}
+
+<div class="purchase-page">
+
+    <div class="page-header">
+        <div>
+            <p class="eyebrow">Purchase Ledger</p>
+            <h1>Material Purchases</h1>
+            <p>Track material bills, vendors, payment status, and dues.</p>
+        </div>
+
+        <div class="summary-cards">
+            <div class="summary-card dark">
+                <span>Total Purchase</span>
+                <strong>₹{{ total_purchase|default:0|floatformat:2 }}</strong>
+            </div>
+
+            <div class="summary-card">
+                <span>Total Due</span>
+                <strong>₹{{ total_due|default:0|floatformat:2 }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <form method="GET">
+            <input type="text" name="q" value="{{ search_query }}" placeholder="Search material or vendor...">
+
+            <select name="sort">
+                <option value="-date" {% if sort_by == "-date" %}selected{% endif %}>Newest First</option>
+                <option value="date" {% if sort_by == "date" %}selected{% endif %}>Oldest First</option>
+                <option value="-amount" {% if sort_by == "-amount" %}selected{% endif %}>Highest Amount</option>
+                <option value="amount" {% if sort_by == "amount" %}selected{% endif %}>Lowest Amount</option>
+            </select>
+
+            <button type="submit">Filter</button>
+        </form>
+    </div>
+
+    <div class="purchase-grid">
+        {% for purchase in purchases %}
+        <div class="purchase-card">
+
+            <div class="card-top">
+                <div>
+                    <h3>{{ purchase.material_name }}</h3>
+                    <p>{{ purchase.vendor_name|default:"No vendor" }}</p>
+                </div>
+
+                {% if purchase.payment_status == "paid" %}
+                    <span class="status paid">Paid</span>
+                {% elif purchase.payment_status == "partial" %}
+                    <span class="status partial">Partial</span>
+                {% else %}
+                    <span class="status unpaid">Unpaid</span>
+                {% endif %}
+            </div>
+
+            <div class="money-grid">
+                <div>
+                    <span>Total</span>
+                    <strong>₹{{ purchase.amount|floatformat:2 }}</strong>
+                </div>
+
+                <div>
+                    <span>Paid</span>
+                    <strong class="green">₹{{ purchase.total_paid|floatformat:2 }}</strong>
+                </div>
+
+                <div>
+                    <span>Due</span>
+                    <strong class="red">₹{{ purchase.remaining_amount|floatformat:2 }}</strong>
+                </div>
+            </div>
+
+            <div class="meta-row">
+                <span>Date</span>
+                <strong>{{ purchase.date|date:"d M, Y" }}</strong>
+            </div>
+
+            <div class="payments-section">
+                <span class="section-title">Payments</span>
+
+                {% for payment in purchase.payments.all %}
+                <div class="payment-row">
+                    <div class="payment-info">
+                        <div class="payment-main">
+                            <span class="payment-amount">₹{{ payment.amount|floatformat:2 }}</span>
+                            <span class="payment-date">{{ payment.payment_date|date:"d M, Y" }}</span>
+                        </div>
+                        <div class="payment-details">
+                            {% if payment.payment_mode %}
+                                <span class="payment-mode">Mode: {{ payment.payment_mode|title }}</span>
+                            {% endif %}
+                            {% if payment.note %}
+                                <span class="payment-note">Note: {{ payment.note }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <form method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="delete_payment">
+                        <input type="hidden" name="payment_id" value="{{ payment.id }}">
+                        <button type="submit" class="delete-icon" title="Delete Payment">×</button>
+                    </form>
+                </div>
+                {% empty %}
+                    <p class="empty-payment">No payment added yet.</p>
+                {% endfor %}
+            </div>
+
+            <div class="card-actions">
+                <button
+                    type="button"
+                    class="pay-btn"
+                    onclick="openPaymentModal('{{ purchase.id }}', '{{ purchase.material_name }}', '{{ purchase.remaining_amount }}')"
+                    {% if purchase.payment_status == "paid" %}disabled{% endif %}
+                >
+                    Add Payment
+                </button>
+
+                <form method="POST" onsubmit="return confirm('Are you sure you want to delete this purchase?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete_purchase">
+                    <input type="hidden" name="purchase_id" value="{{ purchase.id }}">
+                    <button type="submit" class="delete-btn">Delete</button>
+                </form>
+            </div>
+
+        </div>
+        {% empty %}
+        <div class="empty-state">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+            <h3>No Material Purchases</h3>
+            <p>Click the blue + button to add your first purchase.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<button class="fab-button" onclick="openPurchaseModal()">+</button>
+
+<!-- Add Purchase Modal -->
+<div class="modal-overlay" id="purchaseModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div>
+                <h2>Add Material Purchase</h2>
+                <p>Create a new purchase bill.</p>
+            </div>
+            <button onclick="closePurchaseModal()">×</button>
+        </div>
+
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_purchase">
+
+            <div class="form-grid">
+                <div class="full">
+                    <label>Material Name</label>
+                    <input type="text" name="material_name" required>
+                </div>
+
+                <div>
+                    <label>Vendor Name</label>
+                    <input type="text" name="vendor_name">
+                </div>
+
+                <div>
+                    <label>Amount</label>
+                    <input type="number" step="0.01" name="amount" required>
+                </div>
+
+                <div>
+                    <label>Date</label>
+                    <input type="date" name="date" required>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" onclick="closePurchaseModal()" class="cancel-btn">Cancel</button>
+                <button type="submit" class="save-btn">Save Purchase</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Payment Modal -->
+<div class="modal-overlay" id="paymentModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div>
+                <h2>Add Payment</h2>
+                <p id="paymentSubtitle">Record payment against purchase.</p>
+            </div>
+            <button onclick="closePaymentModal()">×</button>
+        </div>
+
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_payment">
+            <input type="hidden" name="purchase_id" id="paymentPurchaseId">
+
+            <div class="form-grid">
+                <div>
+                    <label>Payment Amount</label>
+                    <input type="number" step="0.01" name="payment_amount" required>
+                </div>
+
+                <div>
+                    <label>Payment Date</label>
+                    <input type="date" name="payment_date" required>
+                </div>
+
+                <div>
+                    <label>Payment Mode</label>
+                    <select name="payment_mode">
+                        <option value="">Select Method</option>
+                        <option value="cash">Cash</option>
+                        <option value="upi">UPI</option>
+                        <option value="bank_transfer">Bank Transfer</option>
+                        <option value="cheque">Cheque</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <div class="full">
+                    <label>Note</label>
+                    <textarea name="note" rows="2" placeholder="Add any relevant payment details..."></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" onclick="closePaymentModal()" class="cancel-btn">Cancel</button>
+                <button type="submit" class="save-btn">Save Payment</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+/* Soft Corporate Color Palette & Typography */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.purchase-page {
+    padding: 32px 40px;
+    background: #f8fafc; /* Softer, cooler gray background */
+    min-height: 100vh;
+    color: #334155;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    align-items: flex-end;
+    margin-bottom: 32px;
+}
+
+.eyebrow {
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.5px;
+}
+
+.page-header p {
+    margin: 6px 0 0;
+    color: #64748b;
+    font-size: 14px;
+}
+
+.summary-cards {
+    display: flex;
+    gap: 16px;
+}
+
+.summary-card {
+    background: white;
+    min-width: 200px;
+    border-radius: 8px; /* Sharper edges for corporate feel */
+    padding: 20px 24px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.04);
+}
+
+.summary-card.dark {
+    background: #1e293b; /* Soft slate dark instead of harsh black/blue */
+    color: white;
+    border: 1px solid #1e293b;
+}
+
+.summary-card span {
+    display: block;
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.summary-card.dark span {
+    color: #cbd5e1;
+}
+
+.summary-card strong {
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.toolbar {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 2px rgba(15,23,42,0.02);
+}
+
+.toolbar form {
+    display: flex;
+    gap: 12px;
+}
+
+.toolbar input {
+    flex: 1;
+}
+
+.toolbar input,
+.toolbar select {
+    padding: 10px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #334155;
+    background: #f8fafc;
+    transition: border-color 0.2s;
+}
+
+.toolbar input:focus,
+.toolbar select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background: white;
+}
+
+.toolbar button {
+    background: #3b82f6; /* Softer professional blue */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 0 24px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.toolbar button:hover {
+    background: #2563eb;
+}
+
+.purchase-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 20px;
+}
+
+.purchase-card {
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(15,23,42,0.03);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+}
+
+.card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.card-top h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.card-top p {
+    margin: 4px 0 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.status {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status.paid {
+    background: #f0fdf4;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.status.partial {
+    background: #fffbeb;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+
+.status.unpaid {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+.money-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    border-radius: 6px;
+    padding: 16px;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.money-grid span,
+.meta-row span,
+.section-title {
+    display: block;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.money-grid strong {
+    font-size: 15px;
+    color: #0f172a;
+}
+
+.green { color: #15803d !important; }
+.red { color: #b91c1c !important; }
+
+.meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+}
+
+.meta-row strong {
+    font-size: 13px;
+    color: #334155;
+}
+
+.payments-section {
+    margin-bottom: 24px;
+    flex-grow: 1;
+}
+
+.payment-row {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-top: 8px;
+}
+
+.payment-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.payment-main {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.payment-amount {
+    font-weight: 600;
+    color: #0f172a;
+    font-size: 13px;
+}
+
+.payment-date {
+    color: #64748b;
+    font-size: 12px;
+}
+
+.payment-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.payment-mode,
+.payment-note {
+    font-size: 12px;
+    color: #475569;
+}
+
+.payment-note {
+    font-style: italic;
+    color: #64748b;
+}
+
+.payment-row form {
+    margin: 0;
+}
+
+.delete-icon {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 4px;
+}
+
+.delete-icon:hover {
+    color: #ef4444;
+}
+
+.empty-payment {
+    color: #94a3b8;
+    font-size: 13px;
+    margin-top: 8px;
+}
+
+.card-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: auto;
+}
+
+.pay-btn, .delete-btn {
+    border-radius: 6px;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pay-btn {
+    flex: 1;
+    background: white;
+    color: #0f172a;
+    border: 1px solid #cbd5e1;
+}
+
+.pay-btn:hover:not(:disabled) {
+    background: #f8fafc;
+    border-color: #94a3b8;
+}
+
+.pay-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #f1f5f9;
+}
+
+.delete-btn {
+    background: white;
+    color: #ef4444;
+    border: 1px solid #fecaca;
+}
+
+.delete-btn:hover {
+    background: #fef2f2;
+}
+
+.fab-button {
+    position: fixed;
+    right: 40px;
+    bottom: 40px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: none;
+    background: #3b82f6;
+    color: white;
+    font-size: 28px;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    cursor: pointer;
+    z-index: 100;
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+.fab-button:hover {
+    transform: scale(1.05);
+    background: #2563eb;
+}
+
+/* Modals */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15,23,42,0.6);
+    backdrop-filter: blur(2px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-box {
+    background: white;
+    width: 100%;
+    max-width: 540px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.modal-header h2 {
+    margin: 0 0 4px;
+    font-size: 18px;
+    color: #0f172a;
+}
+
+.modal-header p {
+    margin: 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.modal-header button {
+    background: transparent;
+    border: none;
+    font-size: 24px;
+    color: #94a3b8;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.modal-header button:hover {
+    color: #0f172a;
+}
+
+.form-grid {
+    padding: 24px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.form-grid label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 6px;
+}
+
+.form-grid input,
+.form-grid select,
+.form-grid textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 13px;
+    color: #0f172a;
+}
+
+.form-grid input:focus,
+.form-grid select:focus,
+.form-grid textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.full {
+    grid-column: 1 / -1;
+}
+
+.modal-footer {
+    padding: 16px 24px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    border-radius: 0 0 12px 12px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.cancel-btn, .save-btn {
+    padding: 9px 18px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.cancel-btn {
+    background: white;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+}
+
+.cancel-btn:hover {
+    background: #f1f5f9;
+}
+
+.save-btn {
+    background: #3b82f6;
+    color: white;
+    border: none;
+}
+
+.save-btn:hover {
+    background: #2563eb;
+}
+
+.empty-state {
+    background: white;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    padding: 48px;
+    grid-column: 1 / -1;
+    text-align: center;
+    color: #64748b;
+}
+
+.empty-state h3 {
+    color: #0f172a;
+    margin: 16px 0 8px;
+}
+
+/* Added responsive rule */
+@media(max-width: 900px) {
+    .purchase-page {
+        padding: 20px;
+    }
+
+    .page-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+    }
+
+    .summary-cards,
+    .toolbar form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .purchase-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+function openPurchaseModal() {
+    document.getElementById("purchaseModal").classList.add("active");
+}
+
+function closePurchaseModal() {
+    document.getElementById("purchaseModal").classList.remove("active");
+}
+
+function openPaymentModal(id, materialName, remainingAmount) {
+    document.getElementById("paymentPurchaseId").value = id;
+    document.getElementById("paymentSubtitle").innerText =
+        "Payment for " + materialName + " | Remaining ₹" + remainingAmount;
+    document.getElementById("paymentModal").classList.add("active");
+}
+
+function closePaymentModal() {
+    document.getElementById("paymentModal").classList.remove("active");
+}
+
+document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape") {
+        closePurchaseModal();
+        closePaymentModal();
+    }
+});
+</script>
+
+{% endblock %}

@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.db.models import Sum
 from django.utils import timezone
+from decimal import Decimal
 # Create your models here.
 
 
@@ -560,3 +561,111 @@ class BusinessExpense(models.Model):
     def __str__(self):
         return f"{self.name} - ₹{self.amount}"
 
+class MaterialPurchase(models.Model):
+
+    material_name = models.CharField(max_length=50)
+
+    vendor_name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True
+    )
+
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2
+    )
+
+    date = models.DateField()
+
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-date", "-created_at"]
+
+    def __str__(self):
+        return f"{self.material_name} - ₹{self.amount}"
+
+    @property
+    def total_paid(self):
+
+        total = self.payments.aggregate(
+            total=models.Sum("amount")
+        )["total"]
+
+        return total or Decimal("0.00")
+
+    @property
+    def remaining_amount(self):
+
+        return self.amount - self.total_paid
+
+    @property
+    def payment_status(self):
+
+        if self.total_paid <= 0:
+            return "unpaid"
+
+        elif self.total_paid < self.amount:
+            return "partial"
+
+        return "paid"
+
+
+
+class MaterialPayment(models.Model):
+
+    PAYMENT_MODE_CHOICES = [
+        ("cash", "Cash"),
+        ("upi", "UPI"),
+        ("bank_transfer", "Bank Transfer"),
+        ("cheque", "Cheque"),
+        ("other", "Other"),
+    ]
+
+    purchase = models.ForeignKey(
+        MaterialPurchase,
+        on_delete=models.CASCADE,
+        related_name="payments"
+    )
+
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2
+    )
+
+    payment_date = models.DateField()
+
+    payment_mode = models.CharField(
+        max_length=50,
+        choices=PAYMENT_MODE_CHOICES,
+        blank=True,
+        null=True
+    )
+
+    note = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-payment_date", "-created_at"]
+
+    def __str__(self):
+        return f"₹{self.amount} - {self.purchase.material_name}"

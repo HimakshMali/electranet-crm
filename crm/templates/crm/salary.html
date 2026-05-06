@@ -4,7 +4,6 @@
 
 {% block content %}
 <style>
-    /* --- Professional SaaS Theme Variables --- */
     :root {
         --bg-body: #f8fafc;
         --bg-surface: #ffffff;
@@ -28,7 +27,6 @@
         padding-bottom: 50px;
     }
 
-    /* --- Employee Header Card --- */
     .employee-header {
         background: var(--bg-surface);
         border: 1px solid var(--border-soft);
@@ -67,7 +65,6 @@
         gap: 8px;
     }
 
-    /* --- Modern Cards & Forms --- */
     .saas-card {
         background: var(--bg-surface);
         border: 1px solid var(--border-soft);
@@ -104,13 +101,6 @@
         border-radius: var(--radius-md);
         padding: 10px 12px;
         font-size: 0.95rem;
-        transition: border-color 0.2s, box-shadow 0.2s;
-    }
-
-    .form-control-custom:focus {
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-        outline: none;
     }
 
     .btn-saas-primary {
@@ -121,16 +111,12 @@
         padding: 10px 20px;
         border: none;
         width: 100%;
-        transition: all 0.2s;
     }
 
     .btn-saas-primary:hover {
         background: var(--primary-hover);
-        transform: translateY(-1px);
-        box-shadow: var(--shadow-md);
     }
 
-    /* --- Vertical Timeline CSS --- */
     .timeline {
         position: relative;
         padding-left: 32px;
@@ -142,7 +128,7 @@
         position: absolute;
         top: 0;
         bottom: 0;
-        left: 11px; /* Centers the 2px line within the 24px dot */
+        left: 11px;
         width: 2px;
         background: var(--border-soft);
     }
@@ -152,7 +138,6 @@
         margin-bottom: 24px;
     }
 
-    /* Dynamic Timeline Dots */
     .timeline-dot {
         position: absolute;
         left: -32px;
@@ -164,25 +149,25 @@
         border: 4px solid var(--border-soft);
         z-index: 1;
     }
-    
-    .timeline-item.status-paid .timeline-dot { border-color: var(--success); }
-    .timeline-item.status-pending .timeline-dot { border-color: var(--warning); }
-    .timeline-item.status-unpaid .timeline-dot { border-color: var(--danger); }
 
-    /* Timeline Content Box */
+    .timeline-item.status-paid .timeline-dot {
+        border-color: var(--success);
+    }
+
+    .timeline-item.status-pending .timeline-dot {
+        border-color: var(--warning);
+    }
+
+    .timeline-item.status-unpaid .timeline-dot {
+        border-color: var(--danger);
+    }
+
     .timeline-content {
         background: var(--bg-surface);
         border: 1px solid var(--border-soft);
         border-radius: var(--radius-md);
         padding: 16px;
         box-shadow: var(--shadow-subtle);
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .timeline-content:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--shadow-md);
-        border-color: #cbd5e1;
     }
 
     .timeline-header {
@@ -200,7 +185,6 @@
         color: var(--text-main);
     }
 
-    /* Financial Breakdown Grid */
     .finance-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
@@ -220,12 +204,25 @@
         margin-bottom: 4px;
     }
 
-    .finance-value { font-weight: 600; font-size: 0.95rem; }
-    .val-bonus { color: var(--success); }
-    .val-deduct { color: var(--danger); }
-    .val-net { font-size: 1.1rem; font-weight: 800; color: var(--primary); }
+    .finance-value {
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
 
-    /* Custom Badges */
+    .val-bonus {
+        color: var(--success);
+    }
+
+    .val-deduct {
+        color: var(--danger);
+    }
+
+    .val-net {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: var(--primary);
+    }
+
     .badge-status {
         padding: 4px 10px;
         border-radius: 6px;
@@ -233,66 +230,126 @@
         font-weight: 600;
         text-transform: uppercase;
     }
-    .badge-paid { background: #ecfdf5; color: #059669; }
-    .badge-pending { background: #fffbeb; color: #d97706; }
-    .badge-unpaid { background: #fef2f2; color: #dc2626; }
+
+    .badge-paid {
+        background: #ecfdf5;
+        color: #059669;
+    }
+
+    .badge-pending {
+        background: #fffbeb;
+        color: #d97706;
+    }
+
+    .badge-unpaid {
+        background: #fef2f2;
+        color: #dc2626;
+    }
+
+    .action-btn {
+        border: none;
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .btn-edit-soft {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .btn-delete-soft {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+
+    .modal-content {
+        border: none;
+        border-radius: 16px;
+    }
 </style>
 
 <div class="dashboard-main mt-4 container-fluid">
 
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} rounded-3">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
     <div class="employee-header">
         <div class="employee-info d-flex align-items-center gap-3">
-            <div style="width: 50px; height: 50px; background: var(--bg-column); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--primary); font-weight: bold;">
+            <div style="width: 50px; height: 50px; background: #eff6ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--primary); font-weight: bold;">
                 {{ employee.user.username|make_list|first|upper }}
             </div>
             <div>
                 <h3>{{ employee.user.username }}</h3>
-                <p><i class="fas fa-briefcase me-1"></i> {{ employee.role }} <span class="mx-2">•</span> <i class="fas fa-calendar-alt me-1"></i> Joined {{ employee.joined_since }}</p>
+                <p>
+                    <i class="fas fa-briefcase me-1"></i> {{ employee.role }}
+                    <span class="mx-2">•</span>
+                    <i class="fas fa-calendar-alt me-1"></i> Joined {{ employee.joined_since }}
+                </p>
             </div>
         </div>
+
         <div class="salary-badge shadow-sm">
             <i class="fas fa-wallet"></i> Base: ₹{{ employee.base_salary }}
         </div>
     </div>
 
     <div class="row g-4">
-        
+
         <div class="col-lg-4">
             <div class="saas-card">
                 <div class="saas-card-header">
                     <i class="fas fa-plus-circle me-2 text-primary"></i> Record Salary
                 </div>
+
                 <div class="saas-card-body">
                     <form method="POST">
                         {% csrf_token %}
+                        <input type="hidden" name="action" value="add_salary">
+
                         <div class="row g-3">
                             <div class="col-6">
                                 <label class="form-label-custom">Month</label>
                                 <select name="month" class="form-control form-control-custom" required>
-                                    <option>January</option> <option>February</option> <option>March</option>
-                                    <option>April</option> <option>May</option> <option>June</option>
-                                    <option>July</option> <option>August</option> <option>September</option>
-                                    <option>October</option> <option>November</option> <option>December</option>
+                                    <option>January</option>
+                                    <option>February</option>
+                                    <option>March</option>
+                                    <option>April</option>
+                                    <option>May</option>
+                                    <option>June</option>
+                                    <option>July</option>
+                                    <option>August</option>
+                                    <option>September</option>
+                                    <option>October</option>
+                                    <option>November</option>
+                                    <option>December</option>
                                 </select>
                             </div>
+
                             <div class="col-6">
                                 <label class="form-label-custom">Year</label>
                                 <input type="number" name="year" class="form-control form-control-custom" value="{% now 'Y' %}" required>
                             </div>
-                            
+
                             <div class="col-12">
-                                <label class="form-label-custom">Base Salary (₹)</label>
+                                <label class="form-label-custom">Base Salary ₹</label>
                                 <input type="number" step="0.01" name="base_salary" class="form-control form-control-custom" value="{{ employee.base_salary }}" required>
                             </div>
 
                             <div class="col-6">
-                                <label class="form-label-custom">Bonus (₹)</label>
-                                <input type="number" step="0.01" name="total_bonus" class="form-control form-control-custom" placeholder="0.00">
+                                <label class="form-label-custom">Bonus ₹</label>
+                                <input type="number" step="0.01" name="total_bonus" class="form-control form-control-custom" value="0">
                             </div>
 
                             <div class="col-6">
-                                <label class="form-label-custom">Deductions (₹)</label>
-                                <input type="number" step="0.01" name="total_deductions" class="form-control form-control-custom" placeholder="0.00">
+                                <label class="form-label-custom">Deductions ₹</label>
+                                <input type="number" step="0.01" name="total_deductions" class="form-control form-control-custom" value="0">
                             </div>
 
                             <div class="col-12">
@@ -323,20 +380,44 @@
                 <div class="saas-card-header">
                     <i class="fas fa-history me-2 text-primary"></i> Salary History
                 </div>
+
                 <div class="saas-card-body">
-                    
+
                     {% if salary_records %}
                     <div class="timeline">
                         {% for salary in salary_records %}
                         <div class="timeline-item status-{{ salary.status|lower }}">
                             <div class="timeline-dot"></div>
-                            
+
                             <div class="timeline-content">
                                 <div class="timeline-header">
-                                    <div class="timeline-date">{{ salary.month }} {{ salary.year }}</div>
-                                    <span class="badge-status badge-{{ salary.status|lower }}">
-                                        {{ salary.status }}
-                                    </span>
+                                    <div>
+                                        <div class="timeline-date">{{ salary.month }} {{ salary.year }}</div>
+                                        <small class="text-muted">Salary Record #{{ salary.id }}</small>
+                                    </div>
+
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge-status badge-{{ salary.status|lower }}">
+                                            {{ salary.status }}
+                                        </span>
+
+                                        <button type="button"
+                                                class="action-btn btn-edit-soft"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#editSalaryModal{{ salary.id }}">
+                                            Edit
+                                        </button>
+
+                                        <form method="POST" onsubmit="return confirm('Are you sure you want to delete this salary record?');">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="delete_salary">
+                                            <input type="hidden" name="salary_id" value="{{ salary.id }}">
+
+                                            <button type="submit" class="action-btn btn-delete-soft">
+                                                Delete
+                                            </button>
+                                        </form>
+                                    </div>
                                 </div>
 
                                 <div class="finance-grid">
@@ -344,14 +425,17 @@
                                         <span class="finance-label">Base</span>
                                         <span class="finance-value">₹{{ salary.base_salary }}</span>
                                     </div>
+
                                     <div class="finance-item">
                                         <span class="finance-label">Bonus</span>
                                         <span class="finance-value val-bonus">+ ₹{{ salary.total_bonus|default:"0" }}</span>
                                     </div>
+
                                     <div class="finance-item">
                                         <span class="finance-label">Deductions</span>
                                         <span class="finance-value val-deduct">- ₹{{ salary.total_deductions|default:"0" }}</span>
                                     </div>
+
                                     <div class="finance-item">
                                         <span class="finance-label">Net Pay</span>
                                         <span class="finance-value val-net">₹{{ salary.net_salary }}</span>
@@ -365,6 +449,93 @@
                                 {% endif %}
                             </div>
                         </div>
+
+                        <!-- Edit Modal -->
+                        <div class="modal fade" id="editSalaryModal{{ salary.id }}" tabindex="-1">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <form method="POST">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="edit_salary">
+                                        <input type="hidden" name="salary_id" value="{{ salary.id }}">
+
+                                        <div class="modal-header">
+                                            <h5 class="modal-title fw-bold">
+                                                Edit Salary - {{ salary.month }} {{ salary.year }}
+                                            </h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+
+                                        <div class="modal-body">
+                                            <div class="row g-3">
+                                                <div class="col-6">
+                                                    <label class="form-label-custom">Month</label>
+                                                    <select name="month" class="form-control form-control-custom" required>
+                                                        <option {% if salary.month == "January" %}selected{% endif %}>January</option>
+                                                        <option {% if salary.month == "February" %}selected{% endif %}>February</option>
+                                                        <option {% if salary.month == "March" %}selected{% endif %}>March</option>
+                                                        <option {% if salary.month == "April" %}selected{% endif %}>April</option>
+                                                        <option {% if salary.month == "May" %}selected{% endif %}>May</option>
+                                                        <option {% if salary.month == "June" %}selected{% endif %}>June</option>
+                                                        <option {% if salary.month == "July" %}selected{% endif %}>July</option>
+                                                        <option {% if salary.month == "August" %}selected{% endif %}>August</option>
+                                                        <option {% if salary.month == "September" %}selected{% endif %}>September</option>
+                                                        <option {% if salary.month == "October" %}selected{% endif %}>October</option>
+                                                        <option {% if salary.month == "November" %}selected{% endif %}>November</option>
+                                                        <option {% if salary.month == "December" %}selected{% endif %}>December</option>
+                                                    </select>
+                                                </div>
+
+                                                <div class="col-6">
+                                                    <label class="form-label-custom">Year</label>
+                                                    <input type="number" name="year" class="form-control form-control-custom" value="{{ salary.year }}" required>
+                                                </div>
+
+                                                <div class="col-12">
+                                                    <label class="form-label-custom">Base Salary ₹</label>
+                                                    <input type="number" step="0.01" name="base_salary" class="form-control form-control-custom" value="{{ salary.base_salary }}" required>
+                                                </div>
+
+                                                <div class="col-6">
+                                                    <label class="form-label-custom">Bonus ₹</label>
+                                                    <input type="number" step="0.01" name="total_bonus" class="form-control form-control-custom" value="{{ salary.total_bonus|default:'0' }}">
+                                                </div>
+
+                                                <div class="col-6">
+                                                    <label class="form-label-custom">Deductions ₹</label>
+                                                    <input type="number" step="0.01" name="total_deductions" class="form-control form-control-custom" value="{{ salary.total_deductions|default:'0' }}">
+                                                </div>
+
+                                                <div class="col-12">
+                                                    <label class="form-label-custom">Status</label>
+                                                    <select name="status" class="form-control form-control-custom">
+                                                        <option value="paid" {% if salary.status == "paid" %}selected{% endif %}>Paid</option>
+                                                        <option value="pending" {% if salary.status == "pending" %}selected{% endif %}>Pending</option>
+                                                        <option value="unpaid" {% if salary.status == "unpaid" %}selected{% endif %}>Unpaid</option>
+                                                    </select>
+                                                </div>
+
+                                                <div class="col-12">
+                                                    <label class="form-label-custom">Notes</label>
+                                                    <textarea name="notes" class="form-control form-control-custom" rows="3">{{ salary.notes }}</textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">
+                                                Cancel
+                                            </button>
+
+                                            <button type="submit" class="btn btn-primary rounded-pill px-4">
+                                                Save Changes
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
                         {% endfor %}
                     </div>
                     {% else %}
